@@ -2,11 +2,12 @@ const { Telegraf, Markup } = require('telegraf');
 const axios = require('axios');
 const http = require('http');
 
+// --- CONFIGURATION ---
 const bot = new Telegraf('8899621376:AAFcaWoRVw4QiS74vrsAPvFZxNbnBCEmOF4');
 const API_URL = 'https://bdsmmxz.com/api/v2';
-const API_KEY = 'YOUR_API_KEY'; // Ekhane Account page theke original key boshan
+const API_KEY = 'YOUR_API_KEY'; // Account page theke key ekhane bosaun
 
-// --- Main Menu ---
+// --- MAIN KEYBOARD ---
 const mainKeyboard = Markup.keyboard([
     ['Order'],
     ['Deposit', 'Balance'],
@@ -14,79 +15,70 @@ const mainKeyboard = Markup.keyboard([
     ['Price & Info']
 ]).resize();
 
-// --- Start ---
-bot.start((ctx) => {
-    ctx.replyWithPhoto('https://i.ibb.co/VWV0YfX/rx-smm.jpg', {
-        caption: `🏠 **WELCOME TO RX SMM ZONE** 🏠\n\n🔥 মার্কেটের সবচেয়ে কম দাম\n⚡ ৩০ মিনিটের মধ্যেই অর্ডার কমপ্লিট`,
-        ...mainKeyboard
-    });
+// --- 1. START COMMAND FIX ---
+bot.start(async (ctx) => {
+    const welcomeMsg = `🏠 **WELCOME TO RX SMM ZONE** 🏠\n\n🔥 মার্কেটের সবচেয়ে কম দাম\n🌟 সম্পূর্ণ অটোমেটিক সিস্টেম\n⚡ ৩০ মিনিটের মধ্যেই অর্ডার কমপ্লিট`;
+    
+    try {
+        // Image link jodi thik thake
+        await ctx.replyWithPhoto('https://i.ibb.co/VWV0YfX/rx-smm.jpg', {
+            caption: welcomeMsg,
+            parse_mode: 'Markdown',
+            ...mainKeyboard
+        });
+    } catch (err) {
+        // Image link-e problem hole shudhu text reply dibe (Bot crash hobe na)
+        console.log("Image load fail, sending text only.");
+        await ctx.reply(welcomeMsg, { parse_mode: 'Markdown', ...mainKeyboard });
+    }
 });
 
-// --- Order Click korle Service Dekhabe (API Call) ---
+// --- 2. ORDER CLICK LOGIC (Direct Service List) ---
 bot.hears('Order', async (ctx) => {
     try {
-        await ctx.reply('🔄 Loading Services from Panel...');
-        
-        // API theke service list ana hocche
         const res = await axios.post(API_URL, `key=${API_KEY}&action=services`);
         const services = res.data;
 
         if (Array.isArray(services)) {
-            // Prothom 10-15 ta service dekhano hocche (Telegram limit thake)
-            const serviceButtons = services.slice(0, 15).map(s => [
-                Markup.button.callback(`[${s.service}] ${s.name} - ${s.rate}৳`, `buy_${s.service}`)
+            // Prothom 10 ti service dekhabe
+            const serviceButtons = services.slice(0, 10).map(s => [
+                Markup.button.callback(`[ID: ${s.service}] ${s.name} - ${s.rate}৳`, `buy_${s.service}`)
             ]);
-
             serviceButtons.push([Markup.button.callback('↩️ Return', 'back_home')]);
 
-            ctx.reply('🐢 **Select Your Service:**', Markup.inlineKeyboard(serviceButtons));
+            await ctx.reply('🐢 **Select Your Service:**', Markup.inlineKeyboard(serviceButtons));
         } else {
-            ctx.reply('❌ No services found in panel.');
+            ctx.reply('❌ No services found.');
         }
     } catch (err) {
-        console.error(err);
-        ctx.reply('❌ API theke service load korte somossa hoyeche.');
+        ctx.reply('❌ API Connection Error!');
     }
 });
 
-// --- Balance Section ---
+// --- 3. BALANCE CHECK ---
 bot.hears('Balance', async (ctx) => {
     try {
         const res = await axios.post(API_URL, `key=${API_KEY}&action=balance`);
-        ctx.reply(`💳 **অ্যাকাউন্ট ব্যালেন্স**\n\n💰 বর্তমান ব্যালেন্স: ${res.data.balance || '0.00'} ${res.data.currency || 'USD'}`);
+        ctx.reply(`💳 **ব্যালেন্স:** ${res.data.balance || '0.00'} ${res.data.currency || 'USD'}`);
     } catch (err) {
-        ctx.reply('❌ API Error!');
+        ctx.reply('❌ API error.');
     }
 });
 
-// --- Deposit Section ---
-bot.hears('Deposit', (ctx) => {
-    ctx.reply('💳 আপনি কত টাকা ডিপোজিট করতে চান? শুধু টাকার পরিমাণটি লিখে পাঠান।');
+// --- 4. RENDER PORT BINDING (MANDATORY) ---
+http.createServer((req, res) => {
+    res.write('Bot is running safely!');
+    res.end();
+}).listen(process.env.PORT || 3000);
+
+// --- ERROR CATCHER ---
+bot.catch((err) => {
+    console.log('Bot Error:', err);
 });
 
-bot.on('text', (ctx) => {
-    const amount = parseInt(ctx.message.text);
-    if (!isNaN(amount)) {
-        ctx.reply(`✅ **পেমেন্ট লিঙ্ক তৈরি হয়েছে**\n💵 পরিমাণ: ${amount}.00৳\n\n👇 পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।`, 
-        Markup.inlineKeyboard([
-            [Markup.button.url('Bkash/Nogod Pay', 'https://bdsmmxz.com/deposit')],
-            [Markup.button.url('Binance Pay', 'https://bdsmmxz.com/deposit')]
-        ]));
-    }
-});
+bot.launch().then(() => console.log("Bot Live!"));
 
-// --- Callback handling ---
-bot.action(/buy_(.+)/, (ctx) => {
-    const sId = ctx.match[1];
-    ctx.reply(`✅ Selected Service ID: ${sId}\n\nEkhon apnar order link-ti pathan:`);
-});
-
-bot.action('back_home', (ctx) => {
-    ctx.deleteMessage();
-    ctx.reply('🏠 Main Menu', mainKeyboard);
-});
-
-// --- Render Port ---
-http.createServer((req, res) => { res.write('Bot Live'); res.end(); }).listen(process.env.PORT || 3000);
-
-bot.launch().then(() => console.log("Bot started with dynamic service list!"));
+// Graceful stop
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
+    
