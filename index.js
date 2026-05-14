@@ -5,8 +5,8 @@ const http = require('http');
 // --- CONFIGURATION ---
 const bot = new Telegraf('8899621376:AAFcaWoRVw4QiS74vrsAPvFZxNbnBCEmOF4');
 const API_URL = 'https://bdsmmxz.com/api/v2';
-const API_KEY = 'YOUR_API_KEY'; // 👈 Account page theke original key niye ekhane bosaun
-const ADMIN_ID = 7488161246;
+const API_KEY = 'YOUR_ACTUAL_API_KEY_HERE'; // 👈 bdsmmxz.com theke API Key niye ekhane bosaun
+const ADMIN_ID = 7488161246; // ✅ Apnar Admin ID
 
 // --- KEYBOARDS ---
 const mainKeyboard = Markup.keyboard([
@@ -16,9 +16,9 @@ const mainKeyboard = Markup.keyboard([
     ['Price & Info']
 ]).resize();
 
-// --- START ---
+// --- START COMMAND ---
 bot.start(async (ctx) => {
-    const welcomeMsg = `🏠 **WELCOME TO RX SMM ZONE** 🏠\n\n🔥 মার্কেটের সবচেয়ে কম দাম\n⚡ ৩০ মিনিটের মধ্যেই অর্ডার কমপ্লিট`;
+    const welcomeMsg = `🏠 **WELCOME TO RX SMM ZONE** 🏠\n\n🔥 মার্কেটের সবচেয়ে কম দাম\n🌟 সম্পূর্ণ অটোমেটিক সিস্টেম\n⚡ ৩০ মিনিটের মধ্যেই অর্ডার কমপ্লিট`;
     try {
         await ctx.replyWithPhoto('https://i.ibb.co/VWV0YfX/rx-smm.jpg', {
             caption: welcomeMsg, parse_mode: 'Markdown', ...mainKeyboard
@@ -28,65 +28,72 @@ bot.start(async (ctx) => {
     }
 });
 
-// --- ADMIN ---
+// --- ADMIN PANEL (/admin) ---
 bot.command('admin', (ctx) => {
     if (ctx.from.id === ADMIN_ID) {
-        ctx.reply('🛠 **ADMIN PANEL**', Markup.inlineKeyboard([
-            [Markup.button.callback('📊 Check API Balance', 'admin_balance')],
-            [Markup.button.callback('📢 Broadcast', 'admin_bc')]
+        ctx.reply('🛠 **ADMIN CONTROL PANEL**\n\nWelcome Boss! Ekhan theke bot control korun.', 
+        Markup.inlineKeyboard([
+            [Markup.button.callback('📊 API Balance', 'admin_balance')],
+            [Markup.button.callback('📢 Broadcast', 'admin_bc')],
+            [Markup.button.callback('🔄 Refresh Services', 'admin_update')]
         ]));
+    } else {
+        ctx.reply('❌ Error: Apni admin non!');
     }
 });
 
-// --- ORDER BUTTON (Using API: action: services) ---
+// --- ORDER BUTTON (DYNAMIC SERVICE LIST) ---
 bot.hears('Order', async (ctx) => {
     try {
         const res = await axios.post(API_URL, `key=${API_KEY}&action=services`);
         const services = res.data;
 
         if (Array.isArray(services)) {
-            // Prothom 10 ta service column wise sajano
-            const buttons = services.slice(0, 10).map(s => [
-                Markup.button.callback(`[ID:${s.service}] ${s.name} - ${s.rate}৳`, `buy_${s.service}`)
-            ]);
-            buttons.push([Markup.button.callback('↩️ Return Main Menu', 'back_home')]);
-            ctx.reply('🐢 **Select Your Service:**', Markup.inlineKeyboard(buttons));
+            // Prothom 12 ta service button akare sajano
+            const serviceButtons = [];
+            const limitedServices = services.slice(0, 12);
+            
+            for (let i = 0; i < limitedServices.length; i += 2) {
+                const row = [
+                    Markup.button.callback(`${limitedServices[i].name.substring(0,15)}...`, `buy_${limitedServices[i].service}`)
+                ];
+                if (limitedServices[i+1]) {
+                    row.push(Markup.button.callback(`${limitedServices[i+1].name.substring(0,15)}...`, `buy_${limitedServices[i+1].service}`));
+                }
+                serviceButtons.push(row);
+            }
+
+            serviceButtons.push([Markup.button.callback('↩️ Return Main Menu', 'back_home')]);
+
+            ctx.reply('🐢 **Select Your Service:**', Markup.inlineKeyboard(serviceButtons));
         } else {
-            ctx.reply('❌ No services found in panel.');
+            ctx.reply('❌ No services found in panel API.');
         }
     } catch (err) {
-        ctx.reply('❌ API Connection Error! Key thik ache ki?');
+        ctx.reply('❌ API theke service load hote somossa hoyeche. Key check korun.');
     }
 });
 
-// --- USER BALANCE (Using API: action: balance) ---
+// --- BALANCE ---
 bot.hears('Balance', async (ctx) => {
     try {
         const res = await axios.post(API_URL, `key=${API_KEY}&action=balance`);
-        const data = res.data;
-        ctx.reply(`💳 **অ্যাকাউন্ট ব্যালেন্স**\n\n💰 বর্তমান ব্যালেন্স: ${data.balance || '0.00'} ${data.currency || 'USD'}\n👤 নাম: ${ctx.from.first_name}`);
+        ctx.reply(`💳 **অ্যাকাউন্ট ব্যালেন্স**\n\n💰 বর্তমান ব্যালেন্স: ${res.data.balance || '0.00'} ${res.data.currency || 'USD'}\n👤 ইউজার: ${ctx.from.first_name}`);
     } catch (err) {
         ctx.reply('❌ API Error! Balance load hoy ni.');
     }
 });
 
-// --- NEW ORDER (Using API: action: add) ---
-bot.action(/buy_(.+)/, (ctx) => {
-    const serviceId = ctx.match[1];
-    ctx.reply(`✅ Selected Service ID: ${serviceId}\n\nএখন আপনার অর্ডারের লিঙ্কটি দিন (Link Pathan):`);
-    // Note: User link pathale action: 'add' call korte hobe logic onujayi
-});
-
 // --- DEPOSIT ---
 bot.hears('Deposit', (ctx) => {
-    ctx.reply('💳 কত টাকা ডিপোজিট করতে চান? শুধু টাকার পরিমাণটি লিখে পাঠান।');
+    ctx.reply('💳 আপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান। 👇');
 });
 
-// --- TEXT HANDLING ---
+// --- TEXT HANDLING (Payment Links) ---
 bot.on('text', (ctx) => {
-    const amount = parseInt(ctx.message.text);
-    if (!isNaN(amount)) {
-        ctx.reply(`✅ **পেমেন্ট লিঙ্ক তৈরি হয়েছে**\n💵 পরিমাণ: ${amount}.00৳\n\n👇 পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।`, 
+    const text = ctx.message.text;
+    if (!isNaN(text)) {
+        ctx.reply(`✅ **পেমেন্ট লিঙ্ক তৈরি হয়েছে**\n💵 পরিমাণ: ${text}.00৳\n\n👇 পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।`, 
         Markup.inlineKeyboard([
             [Markup.button.url('Bkash/Nogod Pay', 'https://bdsmmxz.com/deposit')],
             [Markup.button.url('Binance Pay', 'https://bdsmmxz.com/deposit')]
@@ -94,12 +101,39 @@ bot.on('text', (ctx) => {
     }
 });
 
+// --- CALLBACK QUERIES ---
+bot.action(/buy_(.+)/, (ctx) => {
+    const sId = ctx.match[1];
+    ctx.reply(`✅ Selected Service ID: ${sId}\n\nএখন আপনার অর্ডারের লিঙ্কটি দিন (Link Pathan):`);
+});
+
 bot.action('back_home', (ctx) => {
     ctx.deleteMessage();
     ctx.reply('🏠 Main Menu', mainKeyboard);
 });
 
-// --- RENDER PORT LISTENER ---
-http.createServer((req, res) => { res.write('Bot Live'); res.end(); }).listen(process.env.PORT || 3000);
+bot.action('admin_balance', async (ctx) => {
+    try {
+        const res = await axios.post(API_URL, `key=${API_KEY}&action=balance`);
+        ctx.answerCbQuery(`API Balance: ${res.data.balance}`, { show_alert: true });
+    } catch (e) {
+        ctx.answerCbQuery('API Error!');
+    }
+});
 
-bot.launch().then(() => console.log("Bot with bdsmmxz API Started!"));
+// --- RENDER PORT LISTENER (MANDATORY) ---
+http.createServer((req, res) => {
+    res.write('Bot is running safely!');
+    res.end();
+}).listen(process.env.PORT || 3000);
+
+// --- ERROR CATCHER ---
+bot.catch((err) => {
+    console.log('Bot Error:', err);
+});
+
+bot.launch().then(() => console.log("Bot Live for Admin 7488161246"));
+
+// Graceful stop
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
