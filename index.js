@@ -1,14 +1,14 @@
 const { Telegraf, Markup } = require('telegraf');
-const axios = require('axios');
 const http = require('http');
 
-// --- CONFIGURATION ---
 const bot = new Telegraf('8899621376:AAFcaWoRVw4QiS74vrsAPvFZxNbnBCEmOF4');
-const API_URL = 'https://bdsmmxz.com/api/v2';
-const API_KEY = 'YOUR_ACTUAL_API_KEY_HERE'; // 👈 bdsmmxz.com theke API Key niye ekhane bosaun
-const ADMIN_ID = 7488161246; // ✅ Apnar Admin ID
+const ADMIN_ID = 7488161246;
 
-// --- KEYBOARDS ---
+// Local storage for services (Bot restart hole eita reset hote pare Render-e)
+let customServices = []; 
+let adminState = {}; // To track if admin is typing service details
+
+// --- Main Menu ---
 const mainKeyboard = Markup.keyboard([
     ['Order'],
     ['Deposit', 'Balance'],
@@ -16,7 +16,7 @@ const mainKeyboard = Markup.keyboard([
     ['Price & Info']
 ]).resize();
 
-// --- START COMMAND ---
+// --- Start ---
 bot.start(async (ctx) => {
     const welcomeMsg = `🏠 **WELCOME TO RX SMM ZONE** 🏠\n\n🔥 মার্কেটের সবচেয়ে কম দাম\n🌟 সম্পূর্ণ অটোমেটিক সিস্টেম\n⚡ ৩০ মিনিটের মধ্যেই অর্ডার কমপ্লিট`;
     try {
@@ -28,72 +28,68 @@ bot.start(async (ctx) => {
     }
 });
 
-// --- ADMIN PANEL (/admin) ---
+// --- Admin Panel ---
 bot.command('admin', (ctx) => {
     if (ctx.from.id === ADMIN_ID) {
-        ctx.reply('🛠 **ADMIN CONTROL PANEL**\n\nWelcome Boss! Ekhan theke bot control korun.', 
+        ctx.reply('🛠 **ADMIN CONTROL PANEL**', 
         Markup.inlineKeyboard([
-            [Markup.button.callback('📊 API Balance', 'admin_balance')],
-            [Markup.button.callback('📢 Broadcast', 'admin_bc')],
-            [Markup.button.callback('🔄 Refresh Services', 'admin_update')]
+            [Markup.button.callback('➕ Add New Service', 'admin_add')],
+            [Markup.button.callback('🗑 Clear All Services', 'admin_clear')]
         ]));
     } else {
-        ctx.reply('❌ Error: Apni admin non!');
+        ctx.reply('❌ Apni admin non!');
     }
 });
 
-// --- ORDER BUTTON (DYNAMIC SERVICE LIST) ---
-bot.hears('Order', async (ctx) => {
-    try {
-        const res = await axios.post(API_URL, `key=${API_KEY}&action=services`);
-        const services = res.data;
-
-        if (Array.isArray(services)) {
-            // Prothom 12 ta service button akare sajano
-            const serviceButtons = [];
-            const limitedServices = services.slice(0, 12);
-            
-            for (let i = 0; i < limitedServices.length; i += 2) {
-                const row = [
-                    Markup.button.callback(`${limitedServices[i].name.substring(0,15)}...`, `buy_${limitedServices[i].service}`)
-                ];
-                if (limitedServices[i+1]) {
-                    row.push(Markup.button.callback(`${limitedServices[i+1].name.substring(0,15)}...`, `buy_${limitedServices[i+1].service}`));
-                }
-                serviceButtons.push(row);
-            }
-
-            serviceButtons.push([Markup.button.callback('↩️ Return Main Menu', 'back_home')]);
-
-            ctx.reply('🐢 **Select Your Service:**', Markup.inlineKeyboard(serviceButtons));
-        } else {
-            ctx.reply('❌ No services found in panel API.');
-        }
-    } catch (err) {
-        ctx.reply('❌ API theke service load hote somossa hoyeche. Key check korun.');
+// --- Order Button (Showing Manually Added Services) ---
+bot.hears('Order', (ctx) => {
+    if (customServices.length === 0) {
+        return ctx.reply('❌ No services available. Please contact admin.');
     }
+
+    const buttons = customServices.map((s, index) => [
+        Markup.button.callback(`${s.name} - ${s.price}৳`, `buy_${index}`)
+    ]);
+    buttons.push([Markup.button.callback('↩️ Return', 'back_home')]);
+
+    ctx.reply('🐢 **Select Your Service:**', Markup.inlineKeyboard(buttons));
 });
 
-// --- BALANCE ---
-bot.hears('Balance', async (ctx) => {
-    try {
-        const res = await axios.post(API_URL, `key=${API_KEY}&action=balance`);
-        ctx.reply(`💳 **অ্যাকাউন্ট ব্যালেন্স**\n\n💰 বর্তমান ব্যালেন্স: ${res.data.balance || '0.00'} ${res.data.currency || 'USD'}\n👤 ইউজার: ${ctx.from.first_name}`);
-    } catch (err) {
-        ctx.reply('❌ API Error! Balance load hoy ni.');
-    }
+// --- Admin Actions ---
+bot.action('admin_add', (ctx) => {
+    adminState[ctx.from.id] = 'awaiting_service';
+    ctx.reply('Service-er nam ebong dam eivabe likhun:\n\n`Service Name - Price`\n(Example: TikTok Followers - 50)');
 });
 
-// --- DEPOSIT ---
-bot.hears('Deposit', (ctx) => {
-    ctx.reply('💳 আপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান। 👇');
+bot.action('admin_clear', (ctx) => {
+    customServices = [];
+    ctx.reply('✅ Shob service muche fela hoyeche.');
 });
 
-// --- TEXT HANDLING (Payment Links) ---
+// --- Handling Text Input (Admin Adding Service) ---
 bot.on('text', (ctx) => {
+    const userId = ctx.from.id;
     const text = ctx.message.text;
-    if (!isNaN(text)) {
-        ctx.reply(`✅ **পেমেন্ট লিঙ্ক তৈরি হয়েছে**\n💵 পরিমাণ: ${text}.00৳\n\n👇 পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।`, 
+
+    // Admin service add korche kina check
+    if (adminState[userId] === 'awaiting_service' && userId === ADMIN_ID) {
+        const parts = text.split('-');
+        if (parts.length === 2) {
+            const name = parts[0].trim();
+            const price = parts[1].trim();
+            customServices.push({ name, price });
+            delete adminState[userId];
+            ctx.reply(`✅ Service Added: ${name} (${price}৳)`);
+        } else {
+            ctx.reply('❌ Format thik nai. Eivabe likhun: Name - Price');
+        }
+        return;
+    }
+
+    // Default Payment Link Logic
+    const amount = parseInt(text);
+    if (!isNaN(amount)) {
+        ctx.reply(`✅ **পেমেন্ট লিঙ্ক তৈরি হয়েছে**\n💵 পরিমাণ: ${amount}.00৳\n\n👇 পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।`, 
         Markup.inlineKeyboard([
             [Markup.button.url('Bkash/Nogod Pay', 'https://bdsmmxz.com/deposit')],
             [Markup.button.url('Binance Pay', 'https://bdsmmxz.com/deposit')]
@@ -101,10 +97,12 @@ bot.on('text', (ctx) => {
     }
 });
 
-// --- CALLBACK QUERIES ---
 bot.action(/buy_(.+)/, (ctx) => {
-    const sId = ctx.match[1];
-    ctx.reply(`✅ Selected Service ID: ${sId}\n\nএখন আপনার অর্ডারের লিঙ্কটি দিন (Link Pathan):`);
+    const index = ctx.match[1];
+    const service = customServices[index];
+    if(service) {
+        ctx.reply(`✅ Selected: ${service.name}\n💰 Price: ${service.price}৳\n\nএখন আপনার অর্ডারের লিঙ্কটি দিন:`);
+    }
 });
 
 bot.action('back_home', (ctx) => {
@@ -112,28 +110,8 @@ bot.action('back_home', (ctx) => {
     ctx.reply('🏠 Main Menu', mainKeyboard);
 });
 
-bot.action('admin_balance', async (ctx) => {
-    try {
-        const res = await axios.post(API_URL, `key=${API_KEY}&action=balance`);
-        ctx.answerCbQuery(`API Balance: ${res.data.balance}`, { show_alert: true });
-    } catch (e) {
-        ctx.answerCbQuery('API Error!');
-    }
-});
+// --- Port for Render ---
+http.createServer((req, res) => { res.write('Bot Live'); res.end(); }).listen(process.env.PORT || 3000);
 
-// --- RENDER PORT LISTENER (MANDATORY) ---
-http.createServer((req, res) => {
-    res.write('Bot is running safely!');
-    res.end();
-}).listen(process.env.PORT || 3000);
-
-// --- ERROR CATCHER ---
-bot.catch((err) => {
-    console.log('Bot Error:', err);
-});
-
-bot.launch().then(() => console.log("Bot Live for Admin 7488161246"));
-
-// Graceful stop
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
+bot.launch();
+        
