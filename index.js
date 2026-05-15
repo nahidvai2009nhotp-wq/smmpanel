@@ -14,7 +14,7 @@ let servicesDB = {
 };
 
 let userStats = {}; 
-let depositLink = "https://rx-payment-gateway.example.com"; // Apnar payment gateway link
+let depositLink = "https://rx-payment-gateway.example.com"; // Ekhane apnar video-r oi payment webpage link-ti boshaben
 let adminState = {};
 
 let priceInfo = {
@@ -34,20 +34,20 @@ const mainKeyboard = Markup.keyboard([
 
 bot.start((ctx) => ctx.reply('🏠 **WELCOME TO NH AUTO BOOST**', mainKeyboard));
 
-// --- 1. DEPOSIT SECTION (Updated Logic) ---
+// --- 1. DEPOSIT SECTION (Video UI Match) ---
 bot.hears('Deposit', (ctx) => {
     adminState[ctx.from.id] = { step: 'waiting_amount' };
     ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨𝗡𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
 });
 
-// --- 2. BALANCE SECTION (Image UI Match) ---
+// --- 2. BALANCE SECTION ---
 bot.hears('Balance', (ctx) => {
     const userId = ctx.from.id;
     const name = ctx.from.first_name || "User";
     if (!userStats[userId]) userStats[userId] = { balance: 2.00, orders: 0, spent: 0.00 };
     const stats = userStats[userId];
 
-    const balanceMsg = `━━━━━━━━━━━━━━━━━━━━\n💳 **অ্যাকাউন্ট ব্যালেন্স**\n━━━━━━━━━━━━━━━━━━━━\n\n👤 **নাম :** ${name}\n💰 **বর্তমান ব্যালেন্স :** ${stats.balance.toFixed(2)} টাকা\n📦 **Total Orders :** ${stats.orders}\n💵 **Total Spent :** ${stats.spent.toFixed(2)} টাকা\n━━━━━━━━━━━━━━━━━━━━`;
+    const balanceMsg = `💳 ▬▬▬▬▬▬▬▬▬▬\n     **অ্যাকাউন্ট ব্যালেন্স**\n▬▬▬▬▬▬▬▬▬▬▬\n\n👤 **নাম :** ${name}\n💰 **বর্তমান ব্যালেন্স :** ${stats.balance.toFixed(2)} টাকা\n📦 **Total Orders :** ${stats.orders}\n💵 **Total Spent :** ${stats.spent.toFixed(2)} টাকা\n\n▬▬▬▬▬▬▬▬▬▬▬`;
 
     ctx.reply(balanceMsg, {
         parse_mode: 'Markdown',
@@ -109,12 +109,11 @@ bot.action(/p_(.+)/, (ctx) => {
     });
 });
 
-// --- 5. TEXT INPUT HANDLER (Validation & Updated Deposit UI) ---
+// --- 5. TEXT INPUT HANDLER (Payment Gateway Integration) ---
 bot.on('text', (ctx) => {
     const userId = ctx.from.id;
     const msg = ctx.message.text;
 
-    // Admin handlers
     if (adminState[userId] && userId === ADMIN_ID) {
         if (adminState[userId].step === 'editing_link') {
             depositLink = msg;
@@ -123,11 +122,14 @@ bot.on('text', (ctx) => {
         }
     }
 
-    // Deposit Logic
     if (adminState[userId] && adminState[userId].step === 'waiting_amount') {
         const amount = parseFloat(msg);
         if (isNaN(amount)) return ctx.reply('❌ সংখায় লিখুন।');
-        if (amount < 10) return ctx.reply('❌ Minimum amount 10 taka');
+        
+        // 1 likhle error, 10 likhle summary
+        if (amount < 10) {
+            return ctx.reply('❌ Minimum amount 10 taka');
+        }
 
         const orderId = Math.floor(10000000 + Math.random() * 90000000);
         const name = ctx.from.first_name || "Toxic";
@@ -138,8 +140,8 @@ bot.on('text', (ctx) => {
         return ctx.reply(summary, {
             parse_mode: 'Markdown',
             ...Markup.inlineKeyboard([
-                [Markup.button.url('💳 Bkash/Nogod Pay', depositLink)],
-                [Markup.button.url('🌍 Binance Pay', depositLink + "/binance")],
+                [Markup.button.url('💳 Bkash/Nogod Pay', depositLink)], // Click korle video-r moto webpage khulbe
+                [Markup.button.url('🌍 Binance Pay', depositLink)],
                 [Markup.button.url('❓ ডিপোজিট করার নিয়ম', 'https://t.me/support')]
             ])
         });
@@ -156,7 +158,7 @@ bot.command('admin', (ctx) => {
 
 bot.action('admin_edit_link', (ctx) => {
     adminState[ctx.from.id] = { step: 'editing_link' };
-    ctx.reply('🔗 নতুন পেমেন্ট লিঙ্কটি পাঠান:');
+    ctx.reply('🔗 নতুন পেমেন্ট গেটওয়ে লিঙ্কটি পাঠান (Webpage Link):');
 });
 
 bot.action('go_deposit', (ctx) => {
@@ -176,4 +178,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-                        
+        
