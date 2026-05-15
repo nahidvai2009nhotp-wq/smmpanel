@@ -14,10 +14,9 @@ let servicesDB = {
 };
 
 let userStats = {}; 
-let depositLink = "https://bdsmmxz.com/deposit"; 
+let depositLink = "https://rx-payment-gateway.example.com"; // Apnar payment gateway link
 let adminState = {};
 
-// Ei list-ti Price & Info button-e dekhabe
 let priceInfo = {
     'Telegram': "🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — 1 Taka\n❤️ 1K Reacts — 8 Taka\n👥 1K Members — 15 Taka",
     'Facebook': "🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — 5 Tk\n👤 1K Followers — 30 Taka\n😍 1K Reactions — 15 TK",
@@ -35,75 +34,28 @@ const mainKeyboard = Markup.keyboard([
 
 bot.start((ctx) => ctx.reply('🏠 **WELCOME TO NH AUTO BOOST**', mainKeyboard));
 
-// --- 1. PRICE & INFO HANDLER ---
-bot.hears('Price & Info', (ctx) => {
-    ctx.reply('🐢 **কোন সার্ভিসের প্রাইস লিস্ট দেখতে চান?**', Markup.inlineKeyboard([
-        [Markup.button.callback('Telegram', 'p_Telegram'), Markup.button.callback('Facebook', 'p_Facebook')],
-        [Markup.button.callback('Instagram', 'p_Instagram'), Markup.button.callback('TikTok', 'p_TikTok')],
-        [Markup.button.callback('YouTube', 'p_YouTube')],
-        [Markup.button.callback('↩️ Main Menu', 'back_home')]
-    ]));
-});
-
-bot.action(/p_(.+)/, (ctx) => {
-    const cat = ctx.match[1];
-    const info = priceInfo[cat];
-    ctx.editMessageText(`━━━━━━━━━━━━━━━━━━━━━━\n📲 NH AUTO BOOST 🔥 – SERVICE LIST\n━━━━━━━━━━━━━━━━━━━━━━\n\n${info}\n\n━━━━━━━━━━━━━━━━━━━━━━\n💥 তাড়াতাড়ি অর্ডার কমপ্লিট\n⏱ ৩০ মিনিট এর মধ্যে অর্ডার কমপ্লিট হবে\n🛡 গ্যারান্টি সহ সাপোর্ট এবং সার্ভিস\n━━━━━━━━━━━━━━━━━━━━━━`, {
-        parse_mode: 'Markdown',
-        ...Markup.inlineKeyboard([[Markup.button.callback('↩️ Back', 'back_to_price')]])
-    });
-});
-
-// --- 2. DEPOSIT LOGIC ---
+// --- 1. DEPOSIT SECTION (Updated Logic) ---
 bot.hears('Deposit', (ctx) => {
     adminState[ctx.from.id] = { step: 'waiting_amount' };
     ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨𝗡𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
 });
 
-bot.on('text', (ctx) => {
-    const userId = ctx.from.id;
-    const msg = ctx.message.text;
-
-    if (adminState[userId] && adminState[userId].step === 'waiting_amount') {
-        const amount = parseFloat(msg);
-        if (isNaN(amount)) return ctx.reply('❌ সংখায় লিখুন।');
-        if (amount < 10) return ctx.reply('❌ Minimum amount 10 taka');
-
-        const orderId = Math.floor(10000000 + Math.random() * 90000000);
-        const name = ctx.from.first_name || "User";
-        const summary = `✅ **পেমেন্ট লিংক তৈরি হয়েছে**\n━━━━━━━━━━━━━━\n\n👤 **নাম:** ${name}\n💰 **পরিমাণ:** ${amount.toFixed(2)}৳\n➕ **মোট যোগ হবে:** ${amount.toFixed(2)}৳\n🧾 **অর্ডার আইডি:** ${orderId}\n\n👉 **পেমent করতে নিচের বাটনে ক্লিক করুন।**\n━━━━━━━━━━━━━━`;
-        
-        delete adminState[userId];
-        return ctx.reply(summary, {
-            parse_mode: 'Markdown',
-            ...Markup.inlineKeyboard([[Markup.button.url('💸 পেমেন্ট করুন', depositLink)]])
-        });
-    }
-
-    // Admin handlers (link change/service add)
-    if (adminState[userId] && userId === ADMIN_ID) {
-        if (adminState[userId].step === 'editing_link') {
-            depositLink = msg;
-            delete adminState[userId];
-            return ctx.reply('✅ Deposit link updated!');
-        }
-        if (adminState[userId].step === 'adding_service') {
-            const parts = msg.split('-');
-            if (parts.length === 2) {
-                servicesDB[adminState[userId].category].push({ name: parts[0].trim(), price: parts[1].trim() });
-                ctx.reply('✅ Service Added!');
-                delete adminState[userId];
-            } else { ctx.reply('❌ Format: Name - Price'); }
-        }
-    }
-});
-
-// --- 3. BALANCE & ORDER (Shorter for space, code remains same) ---
+// --- 2. BALANCE SECTION (Image UI Match) ---
 bot.hears('Balance', (ctx) => {
-    const stats = userStats[ctx.from.id] || { balance: 0.0, orders: 0, spent: 0.0 };
-    ctx.reply(`💳 **অ্যাকাউন্ট ব্যালেন্স**\n\n👤 নাম : ${ctx.from.first_name}\n💰 ব্যালেন্স : ${stats.balance.toFixed(2)} টাকা\n📦 Orders : ${stats.orders}`, Markup.inlineKeyboard([[Markup.button.callback('💸 ডিপোজিট', 'go_deposit')]]));
+    const userId = ctx.from.id;
+    const name = ctx.from.first_name || "User";
+    if (!userStats[userId]) userStats[userId] = { balance: 2.00, orders: 0, spent: 0.00 };
+    const stats = userStats[userId];
+
+    const balanceMsg = `━━━━━━━━━━━━━━━━━━━━\n💳 **অ্যাকাউন্ট ব্যালেন্স**\n━━━━━━━━━━━━━━━━━━━━\n\n👤 **নাম :** ${name}\n💰 **বর্তমান ব্যালেন্স :** ${stats.balance.toFixed(2)} টাকা\n📦 **Total Orders :** ${stats.orders}\n💵 **Total Spent :** ${stats.spent.toFixed(2)} টাকা\n━━━━━━━━━━━━━━━━━━━━`;
+
+    ctx.reply(balanceMsg, {
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard([[Markup.button.callback('💸 ডিপোজিট করুন', 'go_deposit')]])
+    });
 });
 
+// --- 3. ORDER SECTION ---
 bot.hears('Order', (ctx) => {
     ctx.reply('🏠 **Select your service.**', Markup.inlineKeyboard([
         [Markup.button.callback('TikTok Services', 'cat_TikTok'), Markup.button.callback('Telegram Services', 'cat_Telegram')],
@@ -113,26 +65,115 @@ bot.hears('Order', (ctx) => {
     ]));
 });
 
-// --- 4. NAVIGATION & ADMIN ---
+bot.action(/cat_(.+)/, (ctx) => {
+    const platform = ctx.match[1];
+    let buttons = [];
+    if (platform === 'Instagram') {
+        buttons = [[Markup.button.callback('✅ Instagram Likes ❤️', 'view_IG_Likes'), Markup.button.callback('✅ Instagram Followers 👥', 'view_IG_Followers')], [Markup.button.callback('✅ Instagram Views 👁️', 'view_IG_Views'), Markup.button.callback('↩️ Return.', 'back_to_order')]];
+    } else if (platform === 'Facebook') {
+        buttons = [[Markup.button.callback('✅ Facebook Reacts ❤️', 'view_FB_Reacts'), Markup.button.callback('✅ Facebook Followers 👥', 'view_FB_Followers')], [Markup.button.callback('✅ Facebook Views 📈', 'view_FB_Views'), Markup.button.callback('↩️ Return.', 'back_to_order')]];
+    } else if (platform === 'TikTok') {
+        buttons = [[Markup.button.callback('✅ TikTok Views 📈', 'view_TT_Views'), Markup.button.callback('✅ TikTok Likes ❤️', 'view_TT_Likes')], [Markup.button.callback('✅ TikTok Followers 👥', 'view_TT_Followers'), Markup.button.callback('↩️ Return.', 'back_to_order')]];
+    } else if (platform === 'Telegram') {
+        buttons = [[Markup.button.callback('✅ Telegram Members 👥', 'view_TG_Members'), Markup.button.callback('✅ Telegram Views 👁️', 'view_TG_Views')], [Markup.button.callback('✅ Telegram Reactions 😍', 'view_TG_Reacts'), Markup.button.callback('Telegram Combo Pack 🎁', 'view_TG_Combo')], [Markup.button.callback('↩️ Return.', 'back_to_order')]];
+    } else if (platform === 'YouTube') {
+        buttons = [[Markup.button.callback('✅ YouTube Views 📈', 'view_YT_Views'), Markup.button.callback('✅ YouTube Likes 👍', 'view_YT_Likes')], [Markup.button.callback('✅ YouTube Subscribers 👥', 'view_YT_Subs'), Markup.button.callback('↩️ Return.', 'back_to_order')]];
+    }
+    ctx.editMessageText(`🔥 **${platform} Services:**`, Markup.inlineKeyboard(buttons));
+});
+
+bot.action(/view_(.+)/, (ctx) => {
+    const subCat = ctx.match[1];
+    const services = servicesDB[subCat] || [];
+    if (services.length === 0) return ctx.answerCbQuery('Ekhono kono service add kora hoyni!', { show_alert: true });
+    const buttons = services.map((s, i) => [Markup.button.callback(`${s.name} - ${s.price}৳`, `buy_${subCat}_${i}`)]);
+    buttons.push([Markup.button.callback('↩️ Back', 'back_to_order')]);
+    ctx.editMessageText(`🛒 **Service List:**`, Markup.inlineKeyboard(buttons));
+});
+
+// --- 4. PRICE & INFO ---
+bot.hears('Price & Info', (ctx) => {
+    ctx.reply('🐢 **Select category to see price:**', Markup.inlineKeyboard([
+        [Markup.button.callback('Telegram', 'p_Telegram'), Markup.button.callback('Facebook', 'p_Facebook')],
+        [Markup.button.callback('Instagram', 'p_Instagram'), Markup.button.callback('TikTok', 'p_TikTok')],
+        [Markup.button.callback('YouTube', 'p_YouTube')]
+    ]));
+});
+
+bot.action(/p_(.+)/, (ctx) => {
+    const cat = ctx.match[1];
+    const info = priceInfo[cat];
+    ctx.editMessageText(`━━━━━━━━━━━━━━━━━━━━━━\n${info}\n━━━━━━━━━━━━━━━━━━━━━━`, {
+        parse_mode: 'Markdown',
+        ...Markup.inlineKeyboard([[Markup.button.callback('↩️ Back', 'back_to_price')]])
+    });
+});
+
+// --- 5. TEXT INPUT HANDLER (Validation & Updated Deposit UI) ---
+bot.on('text', (ctx) => {
+    const userId = ctx.from.id;
+    const msg = ctx.message.text;
+
+    // Admin handlers
+    if (adminState[userId] && userId === ADMIN_ID) {
+        if (adminState[userId].step === 'editing_link') {
+            depositLink = msg;
+            delete adminState[userId];
+            return ctx.reply('✅ Deposit link updated!');
+        }
+    }
+
+    // Deposit Logic
+    if (adminState[userId] && adminState[userId].step === 'waiting_amount') {
+        const amount = parseFloat(msg);
+        if (isNaN(amount)) return ctx.reply('❌ সংখায় লিখুন।');
+        if (amount < 10) return ctx.reply('❌ Minimum amount 10 taka');
+
+        const orderId = Math.floor(10000000 + Math.random() * 90000000);
+        const name = ctx.from.first_name || "Toxic";
+        
+        const summary = `✅ **পেমেন্ট লিংক তৈরি হয়েছে**\n━━━━━━━━━━━━━━\n\n👤 **নাম:** ${name}\n💰 **পরিমাণ:** ${amount.toFixed(2)}৳\n➕ **মোট যোগ হবে:** ${amount.toFixed(2)}৳\n🧾 **অর্ডার আইডি:** ${orderId}\n\n👉 **পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।**\n━━━━━━━━━━━━━━`;
+        
+        delete adminState[userId];
+        return ctx.reply(summary, {
+            parse_mode: 'Markdown',
+            ...Markup.inlineKeyboard([
+                [Markup.button.url('💳 Bkash/Nogod Pay', depositLink)],
+                [Markup.button.url('🌍 Binance Pay', depositLink + "/binance")],
+                [Markup.button.url('❓ ডিপোজিট করার নিয়ম', 'https://t.me/support')]
+            ])
+        });
+    }
+});
+
+// --- 6. ADMIN & NAVIGATION ---
 bot.command('admin', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
     ctx.reply('🛠 **ADMIN PANEL**', Markup.inlineKeyboard([
-        [Markup.button.callback('➕ Add Order Service', 'admin_add_serv')],
-        [Markup.button.callback('🔗 Change Deposit Link', 'admin_edit_link')]
+        [Markup.button.callback('🔗 Change Payment Link', 'admin_edit_link')]
     ]));
 });
 
-bot.action('back_to_price', (ctx) => {
-    ctx.editMessageText('🐢 **কোন সার্ভিসের প্রাইস লিস্ট দেখতে চান?**', Markup.inlineKeyboard([
-        [Markup.button.callback('Telegram', 'p_Telegram'), Markup.button.callback('Facebook', 'p_Facebook')],
-        [Markup.button.callback('Instagram', 'p_Instagram'), Markup.button.callback('TikTok', 'p_TikTok')],
-        [Markup.button.callback('YouTube', 'p_YouTube')],
-        [Markup.button.callback('↩️ Main Menu', 'back_home')]
-    ]));
+bot.action('admin_edit_link', (ctx) => {
+    adminState[ctx.from.id] = { step: 'editing_link' };
+    ctx.reply('🔗 নতুন পেমেন্ট লিঙ্কটি পাঠান:');
+});
+
+bot.action('go_deposit', (ctx) => {
+    adminState[ctx.from.id] = { step: 'waiting_amount' };
+    ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨𝗡𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
+});
+
+bot.action('back_to_order', (ctx) => { 
+    ctx.editMessageText('🏠 **Select your service.**', Markup.inlineKeyboard([[Markup.button.callback('TikTok Services', 'cat_TikTok'), Markup.button.callback('Telegram Services', 'cat_Telegram')], [Markup.button.callback('YouTube Services', 'cat_YouTube'), Markup.button.callback('Facebook Services', 'cat_Facebook')], [Markup.button.callback('Instagram Services', 'cat_Instagram')], [Markup.button.callback('↩️ Return', 'back_home')]])); 
+});
+
+bot.action('back_to_price', (ctx) => { 
+    ctx.editMessageText('🐢 **Select category to see price:**', Markup.inlineKeyboard([[Markup.button.callback('Telegram', 'p_Telegram'), Markup.button.callback('Facebook', 'p_Facebook')], [Markup.button.callback('Instagram', 'p_Instagram'), Markup.button.callback('TikTok', 'p_TikTok')], [Markup.button.callback('YouTube', 'p_YouTube')]])); 
 });
 
 bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Menu', mainKeyboard); });
-bot.action('go_deposit', (ctx) => { adminState[ctx.from.id] = { step: 'waiting_amount' }; ctx.reply('পেমেন্ট অ্যামাউন্ট পাঠান (Min 10):'); });
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
+                        
