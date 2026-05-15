@@ -4,9 +4,15 @@ const http = require('http');
 const bot = new Telegraf('8899621376:AAFcaWoRVw4QiS74vrsAPvFZxNbnBCEmOF4');
 const ADMIN_ID = 7488161246;
 
-// Local storage for services (Bot restart hole eita reset hote pare Render-e)
-let customServices = []; 
-let adminState = {}; // To track if admin is typing service details
+// Local Database (Temporary)
+let servicesDB = {
+    'Facebook': [],
+    'TikTok': [],
+    'Telegram': [],
+    'YouTube': []
+};
+
+let adminState = {}; 
 
 // --- Main Menu ---
 const mainKeyboard = Markup.keyboard([
@@ -16,9 +22,8 @@ const mainKeyboard = Markup.keyboard([
     ['Price & Info']
 ]).resize();
 
-// --- Start ---
 bot.start(async (ctx) => {
-    const welcomeMsg = `🏠 **WELCOME TO RX SMM ZONE** 🏠\n\n🔥 মার্কেটের সবচেয়ে কম দাম\n🌟 সম্পূর্ণ অটোমেটিক সিস্টেম\n⚡ ৩০ মিনিটের মধ্যেই অর্ডার কমপ্লিট`;
+    const welcomeMsg = `🏠 **WELCOME TO RX SMM ZONE** 🏠\n\n🔥 মার্কেটের সবচেয়ে কম দাম\n🌟 সম্পূর্ণ অটোমেটিক সিস্টেম`;
     try {
         await ctx.replyWithPhoto('https://i.ibb.co/VWV0YfX/rx-smm.jpg', {
             caption: welcomeMsg, parse_mode: 'Markdown', ...mainKeyboard
@@ -30,88 +35,96 @@ bot.start(async (ctx) => {
 
 // --- Admin Panel ---
 bot.command('admin', (ctx) => {
-    if (ctx.from.id === ADMIN_ID) {
-        ctx.reply('🛠 **ADMIN CONTROL PANEL**', 
-        Markup.inlineKeyboard([
-            [Markup.button.callback('➕ Add New Service', 'admin_add')],
-            [Markup.button.callback('🗑 Clear All Services', 'admin_clear')]
-        ]));
-    } else {
-        ctx.reply('❌ Apni admin non!');
-    }
+    if (ctx.from.id !== ADMIN_ID) return ctx.reply('❌ Apni admin non!');
+    
+    ctx.reply('🛠 **ADMIN CONTROL PANEL**\nService add korar jonno category select korun:', 
+    Markup.inlineKeyboard([
+        [Markup.button.callback('➕ Facebook', 'add_Facebook'), Markup.button.callback('➕ TikTok', 'add_TikTok')],
+        [Markup.button.callback('➕ Telegram', 'add_Telegram'), Markup.button.callback('➕ YouTube', 'add_YouTube')],
+        [Markup.button.callback('🗑 Clear All', 'admin_clear')]
+    ]));
 });
 
-// --- Order Button (Showing Manually Added Services) ---
+// --- Admin Add Logic ---
+bot.action(/add_(.+)/, (ctx) => {
+    const category = ctx.match[1];
+    adminState[ctx.from.id] = { step: 'adding', category: category };
+    ctx.reply(`📝 **${category}**-er jonno service details pathan.\n\nFormat: \`Service Name - Price\`\nExample: \`1k Followers - 120\``);
+});
+
+// --- Order Section (Category View) ---
 bot.hears('Order', (ctx) => {
-    if (customServices.length === 0) {
-        return ctx.reply('❌ No services available. Please contact admin.');
+    ctx.reply('🐢 **Select Category:**', Markup.inlineKeyboard([
+        [Markup.button.callback('Facebook Services', 'view_Facebook'), Markup.button.callback('TikTok Services', 'view_TikTok')],
+        [Markup.button.callback('Telegram Services', 'view_Telegram'), Markup.button.callback('YouTube Services', 'view_YouTube')],
+        [Markup.button.callback('↩️ Return', 'back_home')]
+    ]));
+});
+
+// --- View Services based on Category ---
+bot.action(/view_(.+)/, (ctx) => {
+    const category = ctx.match[1];
+    const services = servicesDB[category];
+
+    if (!services || services.length === 0) {
+        return ctx.answerCbQuery(`❌ ${category}-e kono service nei!`, { show_alert: true });
     }
 
-    const buttons = customServices.map((s, index) => [
-        Markup.button.callback(`${s.name} - ${s.price}৳`, `buy_${index}`)
+    const buttons = services.map((s, index) => [
+        Markup.button.callback(`${s.name} - ${s.price}৳`, `buy_${category}_${index}`)
     ]);
-    buttons.push([Markup.button.callback('↩️ Return', 'back_home')]);
+    buttons.push([Markup.button.callback('↩️ Back to Categories', 'back_to_order')]);
 
-    ctx.reply('🐢 **Select Your Service:**', Markup.inlineKeyboard(buttons));
+    ctx.editMessageText(`🔥 **${category} Services:**`, Markup.inlineKeyboard(buttons));
 });
 
-// --- Admin Actions ---
-bot.action('admin_add', (ctx) => {
-    adminState[ctx.from.id] = 'awaiting_service';
-    ctx.reply('Service-er nam ebong dam eivabe likhun:\n\n`Service Name - Price`\n(Example: TikTok Followers - 50)');
-});
-
-bot.action('admin_clear', (ctx) => {
-    customServices = [];
-    ctx.reply('✅ Shob service muche fela hoyeche.');
-});
-
-// --- Handling Text Input (Admin Adding Service) ---
+// --- Handling Admin Text Input ---
 bot.on('text', (ctx) => {
     const userId = ctx.from.id;
     const text = ctx.message.text;
 
-    // Admin service add korche kina check
-    if (adminState[userId] === 'awaiting_service' && userId === ADMIN_ID) {
+    if (adminState[userId] && adminState[userId].step === 'adding' && userId === ADMIN_ID) {
         const parts = text.split('-');
         if (parts.length === 2) {
-            const name = parts[0].trim();
-            const price = parts[1].trim();
-            customServices.push({ name, price });
+            const category = adminState[userId].category;
+            servicesDB[category].push({ name: parts[0].trim(), price: parts[1].trim() });
             delete adminState[userId];
-            ctx.reply(`✅ Service Added: ${name} (${price}৳)`);
+            ctx.reply(`✅ Added to ${category}: ${parts[0].trim()} (${parts[1].trim()}৳)`);
         } else {
-            ctx.reply('❌ Format thik nai. Eivabe likhun: Name - Price');
+            ctx.reply('❌ Format vul! Likhun: Name - Price');
         }
         return;
     }
 
-    // Default Payment Link Logic
-    const amount = parseInt(text);
-    if (!isNaN(amount)) {
-        ctx.reply(`✅ **পেমেন্ট লিঙ্ক তৈরি হয়েছে**\n💵 পরিমাণ: ${amount}.00৳\n\n👇 পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।`, 
-        Markup.inlineKeyboard([
-            [Markup.button.url('Bkash/Nogod Pay', 'https://bdsmmxz.com/deposit')],
-            [Markup.button.url('Binance Pay', 'https://bdsmmxz.com/deposit')]
-        ]));
+    // Default Payment logic
+    if (!isNaN(text)) {
+        ctx.reply(`✅ **পেমেন্ট লিঙ্ক তৈরি হয়েছে**\n💵 পরিমাণ: ${text}.00৳\n\n👇 পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।`, 
+        Markup.inlineKeyboard([[Markup.button.url('Bkash/Nogod Pay', 'https://bdsmmxz.com/deposit')]]));
     }
 });
 
-bot.action(/buy_(.+)/, (ctx) => {
-    const index = ctx.match[1];
-    const service = customServices[index];
-    if(service) {
-        ctx.reply(`✅ Selected: ${service.name}\n💰 Price: ${service.price}৳\n\nএখন আপনার অর্ডারের লিঙ্কটি দিন:`);
-    }
+// --- Buy Action ---
+bot.action(/buy_(.+)_(.+)/, (ctx) => {
+    const category = ctx.match[1];
+    const index = ctx.match[2];
+    const service = servicesDB[category][index];
+    ctx.reply(`✅ Selected: ${service.name} (${category})\n💰 Price: ${service.price}৳\n\nLink pathan:`);
 });
 
-bot.action('back_home', (ctx) => {
-    ctx.deleteMessage();
-    ctx.reply('🏠 Main Menu', mainKeyboard);
+bot.action('back_to_order', (ctx) => {
+    ctx.editMessageText('🐢 **Select Category:**', Markup.inlineKeyboard([
+        [Markup.button.callback('Facebook Services', 'view_Facebook'), Markup.button.callback('TikTok Services', 'view_TikTok')],
+        [Markup.button.callback('Telegram Services', 'view_Telegram'), Markup.button.callback('YouTube Services', 'view_YouTube')],
+        [Markup.button.callback('↩️ Return', 'back_home')]
+    ]));
 });
 
-// --- Port for Render ---
+bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Menu', mainKeyboard); });
+
+bot.action('admin_clear', (ctx) => {
+    servicesDB = { 'Facebook': [], 'TikTok': [], 'Telegram': [], 'YouTube': [] };
+    ctx.reply('✅ All services cleared!');
+});
+
 http.createServer((req, res) => { res.write('Bot Live'); res.end(); }).listen(process.env.PORT || 3000);
-
 bot.launch();
-        
