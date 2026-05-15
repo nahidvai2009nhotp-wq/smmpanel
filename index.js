@@ -1,7 +1,7 @@
 const { Telegraf, Markup } = require('telegraf');
 const http = require('http');
 
-const bot = new Telegraf('8899621376:AAFcaWoRVw4QiS74vrsAPvFZxNbnBCEmOF4');
+const bot = new Telegraf('8255693337:AAEOHh2xoiOwoR-K3ndLGtui8dmbGcgVlJ0');
 const ADMIN_ID = 7488161246;
 
 // --- DATABASE & SETTINGS ---
