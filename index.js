@@ -61,7 +61,7 @@ bot.hears('Balance', (ctx) => {
     });
 });
 
-// --- 3. ORDER SECTION (Updated Keyboard Layout based on Photo) ---
+// --- 3. ORDER SECTION ---
 bot.hears('Order', (ctx) => {
     ctx.reply('🏠 **Select your service.**', Markup.inlineKeyboard([
         [Markup.button.callback('TikTok Services', 'cat_TikTok'), Markup.button.callback('Telegram Services', 'cat_Telegram')],
@@ -88,13 +88,47 @@ bot.action(/cat_(.+)/, (ctx) => {
     ctx.editMessageText(`🔥 **${platform} Services:**`, Markup.inlineKeyboard(buttons));
 });
 
+// --- SERVICE ITEM CLICK HANDLERS (Custom UI Routing) ---
 bot.action(/view_(.+)/, (ctx) => {
     const subCat = ctx.match[1];
-    const services = servicesDB[subCat] || [];
-    if (services.length === 0) return ctx.answerCbQuery('Ekhono kono service add kora hoyni!', { show_alert: true });
-    const buttons = services.map((s, i) => [Markup.button.callback(`${s.name} - ${s.price}৳`, `buy_${subCat}_${i}`)]);
-    buttons.push([Markup.button.callback('↩️ Back', 'back_to_order')]);
-    ctx.editMessageText(`🛒 **Service List:**`, Markup.inlineKeyboard(buttons));
+    
+    // Facebook React custom selection step
+    if (subCat === 'FB_Reacts') {
+        return ctx.editMessageText('🎭 **Select Reaction Type:**', Markup.inlineKeyboard([
+            [Markup.button.callback('1. love💖', 'fbreact_love'), Markup.button.callback('2. like👍', 'fbreact_like')],
+            [Markup.button.callback('↩️ Return', 'back_to_order')]
+        ]));
+    }
+
+    // Handle other sub-categories with custom link prompt UI
+    let promptMsg = '';
+    if (subCat === 'TT_Likes' || subCat === 'TT_Views' || subCat === 'TG_Views' || subCat === 'TG_Reacts' || subCat === 'YT_Views' || subCat === 'YT_Likes' || subCat === 'FB_Views' || subCat === 'IG_Likes' || subCat === 'IG_Views') {
+        promptMsg = '❯ Enter Your Post Link';
+    } else if (subCat === 'TT_Followers') {
+        promptMsg = '❯ Enter Your Profile Link';
+    } else if (subCat === 'TG_Members') {
+        promptMsg = '❯ Enter Your Channel Or Group Link';
+    } else if (subCat === 'TG_Combo') {
+        promptMsg = 'Reacts+Views 1k 10 Taka (Life Time) Super Fast service 💥\n\n❯ আপনার পোস্ট লিঙ্ক দেন 👇🏻';
+    } else if (subCat === 'YT_Subs') {
+        promptMsg = '❯ Enter Your Channel Link';
+    } else if (subCat === 'FB_Followers') {
+        promptMsg = '❯ Enter Your Profile/Page Link';
+    } else if (subCat === 'IG_Followers') {
+        promptMsg = '❯ Enter Your Profile Link';
+    } else {
+        promptMsg = '❯ Enter Link:';
+    }
+
+    ctx.reply(promptMsg);
+});
+
+// Facebook React Option Interceptors
+bot.action('fbreact_love', (ctx) => {
+    ctx.reply('❯ Enter Your Post Link');
+});
+bot.action('fbreact_like', (ctx) => {
+    ctx.reply('❯ Enter Your Post Link');
 });
 
 // --- 4. PRICE & INFO ---
@@ -262,4 +296,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-                
+                                                                                                           
