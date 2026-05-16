@@ -89,7 +89,7 @@ bot.action(/cat_(.+)/, (ctx) => {
     ctx.editMessageText(`🔥 **${platform} Services:**`, Markup.inlineKeyboard(buttons));
 });
 
-// --- SERVICE ITEM CLICK HANDLERS (Custom UI Routing) ---
+// --- SERVICE ITEM CLICK HANDLERS (Custom UI Routing with Exact Service Tracking) ---
 bot.action(/view_(.+)/, (ctx) => {
     const userId = ctx.from.id;
     const subCat = ctx.match[1];
@@ -102,8 +102,10 @@ bot.action(/view_(.+)/, (ctx) => {
         ]));
     }
 
-    // Handle other sub-categories with custom link prompt UI
+    // Process exact readable string for Service Name Tracking
+    let serviceLabel = subCat.replace('_', ' ');
     let promptMsg = '';
+    
     if (subCat === 'TT_Likes' || subCat === 'TT_Views' || subCat === 'TG_Views' || subCat === 'TG_Reacts' || subCat === 'YT_Views' || subCat === 'YT_Likes' || subCat === 'FB_Views' || subCat === 'IG_Likes' || subCat === 'IG_Views') {
         promptMsg = '❯ Enter Your Post Link';
     } else if (subCat === 'TT_Followers') {
@@ -122,17 +124,18 @@ bot.action(/view_(.+)/, (ctx) => {
         promptMsg = '❯ Enter Link:';
     }
 
-    adminState[userId] = { step: 'waiting_order_link' };
+    // Save step tracking along with mapped service label
+    adminState[userId] = { step: 'waiting_order_link', serviceName: serviceLabel };
     ctx.reply(promptMsg);
 });
 
 // Facebook React Option Interceptors
 bot.action('fbreact_love', (ctx) => {
-    adminState[ctx.from.id] = { step: 'waiting_order_link' };
+    adminState[ctx.from.id] = { step: 'waiting_order_link', serviceName: 'FB Reacts (Love💖)' };
     ctx.reply('❯ Enter Your Post Link');
 });
 bot.action('fbreact_like', (ctx) => {
-    adminState[ctx.from.id] = { step: 'waiting_order_link' };
+    adminState[ctx.from.id] = { step: 'waiting_order_link', serviceName: 'FB Reacts (Like👍)' };
     ctx.reply('❯ Enter Your Post Link');
 });
 
@@ -208,9 +211,13 @@ bot.on('text', (ctx) => {
         }
     }
 
-    // Order Link step -> Proceed to ask Quantity
+    // Order Link step -> Proceed to ask Quantity (Preserving Service Name Context)
     if (adminState[userId] && adminState[userId].step === 'waiting_order_link') {
-        adminState[userId] = { step: 'waiting_order_quantity', link: msg };
+        adminState[userId] = { 
+            step: 'waiting_order_quantity', 
+            link: msg, 
+            serviceName: adminState[userId].serviceName || 'Unknown Service' 
+        };
         return ctx.reply('❯ Enter Quantity (পরিমাণ লিখুন):');
     }
 
@@ -229,8 +236,8 @@ bot.on('text', (ctx) => {
         const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @nhautozone`;
         ctx.reply(orderSuccessMsg);
 
-        // Advanced Validation Message to Dedicated Admin Verification Group (-1003893464734)
-        const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification`;
+        // Updated Group Payload Format with layout requested and Mapped Service tracking details
+        const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification\n${adminState[userId].serviceName}`;
         
         bot.telegram.sendMessage(ADMIN_GROUP_ID, groupPayload, Markup.inlineKeyboard([
             [Markup.button.callback('✅ Confirm', `approve_${userId}_${generatedOrderId}`), Markup.button.callback('🚫 Cancel', `reject_${userId}_${generatedOrderId}`)]
@@ -357,4 +364,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-                                                                                                         
+         
