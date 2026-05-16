@@ -7,6 +7,7 @@ const bot = new Telegraf('8255693337:AAEOHh2xoiOwoR-K3ndLGtui8dmbGcgVlJ0');
 // Initial setup with your primary account as global supervisor
 let admins = [7488161246]; 
 let adminState = {};
+const ADMIN_GROUP_ID = -5180764577; // Your Dedicated Admin Verification Group ID
 
 // --- DATABASE & SETTINGS ---
 let servicesDB = { 
@@ -24,7 +25,7 @@ let bkashNumber = "01897846165";
 let nagadNumber = "0101001010";
 
 let priceInfo = {
-    'Telegram': "🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — 1 Taka\n❤️ 1K Reacts — 8 Taka\n👥 1K Members — 15 Taka",
+    'Telegram': "🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — 1 Taka\n❤️ 1K Reacts — 8 Taka\n👥 1K Members — 15 Taka",
     'Facebook': "🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — 5 Tk\n👤 1K Followers — 30 Taka\n😍 1K Reactions — 15 TK",
     'Instagram': "🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — 1 Taka\n❤️ 1K Likes — 20 Taka\n⭐ 1K Followers — 45 Taka",
     'TikTok': "⚫ 𝗧𝗜𝗞𝗧𝗢𝗞\n\n👁️ 1K Views — 3 Taka\n👍 1K Likes — 10 Taka\n⭐ 1K Followers — 150 Tk",
@@ -218,22 +219,25 @@ bot.on('text', (ctx) => {
         const qty = parseInt(msg);
         if (isNaN(qty) || qty <= 0) return ctx.reply('❌ সঠিক পরিমাণ সংখ্যায় লিখুন।');
         
-        // Random Order ID generation
-        const generatedOrderId = Math.floor(10000000 + Math.random() * 90000000);
+        // Random 6-digit Order ID generation
+        const generatedOrderId = Math.floor(100000 + Math.random() * 900000);
         
-        // Update local stats context if user data exists
         if (!userStats[userId]) userStats[userId] = { balance: 2.00, orders: 0, spent: 0.00 };
         userStats[userId].orders += 1;
 
-        const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @RXSMMZONE`;
+        // Message to the User
+        const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @nhautozone`;
+        ctx.reply(orderSuccessMsg);
+
+        // Advanced Validation Message to Dedicated Admin Verification Group (-5180764577)
+        const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification`;
         
-        // Send alert to admin log logs
-        admins.forEach(adminId => {
-            bot.telegram.sendMessage(adminId, `📦 **New Order Placed!**\n\n👤 User: ${ctx.from.first_name} (${userId})\n🆔 Order ID: ${generatedOrderId}\n🔗 Link: ${adminState[userId].link}\n📊 Qty: ${qty}`).catch(e => console.log(e.message));
-        });
+        bot.telegram.sendMessage(ADMIN_GROUP_ID, groupPayload, Markup.inlineKeyboard([
+            [Markup.button.callback('✅ Confirm', `approve_${userId}_${generatedOrderId}`), Markup.button.callback('🚫 Cancel', `reject_${userId}_${generatedOrderId}`)]
+        ])).catch(e => console.log("Group message delivery error:", e.message));
 
         delete adminState[userId];
-        return ctx.reply(orderSuccessMsg);
+        return;
     }
 
     // User State Deposit Processing
@@ -263,6 +267,30 @@ bot.on('text', (ctx) => {
         delete adminState[userId];
         return;
     }
+});
+
+// --- INTERCEPTOR FOR ADMINE VALIDATION GROUP ACTIONS ---
+bot.action(/approve_(.+)_(.+)/, (ctx) => {
+    const targetUserId = ctx.match[1];
+    const orderId = ctx.match[2];
+
+    // Send absolute verification notification directly to customer inbox
+    const customerReceipt = `🎉YOUR_ORDER_COMPLETE🎉\n\nORDER_ID: ${orderId}\n\nTHANKS FOR ORDER`;
+    bot.telegram.sendMessage(targetUserId, customerReceipt).catch(e => console.log(e.message));
+
+    // Update group layout log context
+    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status 更新:** ✅ Approved / Completed by Admin.`);
+    ctx.answerCbQuery('Order successfully confirmed!', { show_alert: false });
+});
+
+bot.action(/reject_(.+)_(.+)/, (ctx) => {
+    const targetUserId = ctx.match[1];
+    const orderId = ctx.match[2];
+
+    bot.telegram.sendMessage(targetUserId, `❌ Your Order ID: ${orderId} has been cancelled by administrator.`).catch(e => console.log(e.message));
+
+    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status 更新:** 🚫 Cancelled by Admin.`);
+    ctx.answerCbQuery('Order cancelled.', { show_alert: false });
 });
 
 // --- 6. ADMIN COMMAND BACKUP INITIALIZER ---
@@ -329,4 +357,3 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-        
