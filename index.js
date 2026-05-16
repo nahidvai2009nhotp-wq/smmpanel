@@ -41,11 +41,49 @@ const serviceRates = {
     'YT_Views': 120.0, 'YT_Likes': 60.0, 'YT_Subs': 140.0
 };
 
+// --- CORE SYSTEM DASHBOARD KEYBOARD LAYOUTS ---
 const mainKeyboard = Markup.keyboard([
     ['Order'],
     ['Deposit', 'Balance'],
     ['Support', 'Price & Info'],
     ['Premium service']
+]).resize();
+
+const platformKeyboard = Markup.keyboard([
+    ['TikTok Services', 'Telegram Services'],
+    ['YouTube Services', 'FaceBook Services'],
+    ['InstaGram Services', '🌐 Premium service'],
+    ['↩️ Return Dashboard']
+]).resize();
+
+const tiktokKeyboard = Markup.keyboard([
+    ['✅ TikTok Views 📈', '✅ TikTok Likes ❤️'],
+    ['✅ TikTok Followers 👥'],
+    ['↩️ Back to Category']
+]).resize();
+
+const telegramKeyboard = Markup.keyboard([
+    ['✅ Telegram Members 👥', '✅ Telegram Views 👁️'],
+    ['✅ Telegram Reactions 😍', 'Telegram Combo Pack 🎁'],
+    ['↩️ Back to Category']
+]).resize();
+
+const youtubeKeyboard = Markup.keyboard([
+    ['✅ YouTube Views 📈', '✅ YouTube Likes 👍'],
+    ['✅ YouTube Subscribers 👥'],
+    ['↩️ Back to Category']
+]).resize();
+
+const facebookKeyboard = Markup.keyboard([
+    ['✅ Facebook Reacts ❤️', '✅ Facebook Followers 👥'],
+    ['✅ Facebook Views 📈'],
+    ['↩️ Back to Category']
+]).resize();
+
+const instagramKeyboard = Markup.keyboard([
+    ['✅ Instagram Likes ❤️', '✅ Instagram Followers 👥'],
+    ['✅ Instagram Views 👁️'],
+    ['↩️ Back to Category']
 ]).resize();
 
 bot.start((ctx) => ctx.reply('🏠 **WELCOME TO NH AUTO BOOST**', mainKeyboard));
@@ -71,71 +109,78 @@ bot.hears('Balance', (ctx) => {
     });
 });
 
-// --- 3. ORDER SECTION ---
+// --- 3. DYNAMIC DASHBOARD REPLACEMENT SWITCHES ---
 bot.hears('Order', (ctx) => {
-    ctx.reply('🏠 **Select your service.**', Markup.inlineKeyboard([
-        [Markup.button.callback('TikTok Services', 'cat_TikTok'), Markup.button.callback('Telegram Services', 'cat_Telegram')],
-        [Markup.button.callback('YouTube Services', 'cat_YouTube'), Markup.button.callback('FaceBook Services', 'cat_Facebook')],
-        [Markup.button.callback('InstaGram Services', 'cat_Instagram'), Markup.button.callback('🌐 Premium service', 'premium_service')],
-        [Markup.button.callback('↩️ Return', 'back_home')]
+    ctx.reply('🏠 **Select your platform category below:**', platformKeyboard);
+});
+
+bot.hears('↩️ Return Dashboard', (ctx) => {
+    ctx.reply('🏠 **Main Dashboard Menu:**', mainKeyboard);
+});
+
+bot.hears('↩️ Back to Category', (ctx) => {
+    ctx.reply('🏠 **Select your platform category below:**', platformKeyboard);
+});
+
+bot.hears('TikTok Services', (ctx) => {
+    ctx.reply('🔥 **TikTok Services Menu:**', tiktokKeyboard);
+});
+
+bot.hears('Telegram Services', (ctx) => {
+    ctx.reply('🔥 **Telegram Services Menu:**', telegramKeyboard);
+});
+
+bot.hears('YouTube Services', (ctx) => {
+    ctx.reply('🔥 **YouTube Services Menu:**', youtubeKeyboard);
+});
+
+bot.hears('FaceBook Services', (ctx) => {
+    ctx.reply('🔥 **FaceBook Services Menu:**', facebookKeyboard);
+});
+
+bot.hears('InstaGram Services', (ctx) => {
+    ctx.reply('🔥 **InstaGram Services Menu:**', instagramKeyboard);
+});
+
+bot.hears('🌐 Premium service', (ctx) => {
+    ctx.reply('Premium service ekhono available noy!');
+});
+
+// --- CORE INTERNAL ROUTING VIA TEXT INTERCEPT ---
+function triggerOrderFlow(ctx, serviceLabel, subCat, promptMsg) {
+    const userId = ctx.from.id;
+    adminState[userId] = { step: 'waiting_order_link', serviceName: serviceLabel, serviceKey: subCat };
+    ctx.reply(promptMsg);
+}
+
+// Service Action Mappings for physical keyboard buttons
+bot.hears('✅ TikTok Views 📈', (ctx) => triggerOrderFlow(ctx, 'TikTok Views', 'TT_Views', '❯ Enter Your Post Link'));
+bot.hears('✅ TikTok Likes ❤️', (ctx) => triggerOrderFlow(ctx, 'TikTok Likes', 'TT_Likes', '❯ Enter Your Post Link'));
+bot.hears('✅ TikTok Followers 👥', (ctx) => triggerOrderFlow(ctx, 'TikTok Followers', 'TT_Followers', '❯ Enter Your Profile Link'));
+
+bot.hears('✅ Telegram Members 👥', (ctx) => triggerOrderFlow(ctx, 'Telegram Members', 'TG_Members', '❯ Enter Your Channel Or Group Link'));
+bot.hears('✅ Telegram Views 👁️', (ctx) => triggerOrderFlow(ctx, 'Telegram Views', 'TG_Views', '❯ Enter Your Post Link'));
+bot.hears('✅ Telegram Reactions 😍', (ctx) => triggerOrderFlow(ctx, 'Telegram Reactions', 'TG_Reacts', '❯ Enter Your Post Link'));
+bot.hears('Telegram Combo Pack 🎁', (ctx) => triggerOrderFlow(ctx, 'Telegram Combo Pack', 'TG_Combo', 'Reacts+Views 1k 10 Taka (Life Time) Super Fast service 💥\n\n❯ আপনার পোস্ট লিঙ্ক দেন 👇🏻'));
+
+bot.hears('✅ YouTube Views 📈', (ctx) => triggerOrderFlow(ctx, 'YouTube Views', 'YT_Views', '❯ Enter Your Post Link'));
+bot.hears('✅ YouTube Likes 👍', (ctx) => triggerOrderFlow(ctx, 'YouTube Likes', 'YT_Likes', '❯ Enter Your Post Link'));
+bot.hears('✅ YouTube Subscribers 👥', (ctx) => triggerOrderFlow(ctx, 'YouTube Subscribers', 'YT_Subs', '❯ Enter Your Channel Link'));
+
+bot.hears('✅ Facebook Followers 👥', (ctx) => triggerOrderFlow(ctx, 'Facebook Followers', 'FB_Followers', '❯ Enter Your Profile/Page Link'));
+bot.hears('✅ Facebook Views 📈', (ctx) => triggerOrderFlow(ctx, 'Facebook Views', 'FB_Views', '❯ Enter Your Post Link'));
+bot.hears('✅ Facebook Reacts ❤️', (ctx) => {
+    ctx.reply('🎭 **Select Reaction Type:**', Markup.inlineKeyboard([
+        [Markup.button.callback('1. love💖', 'fbreact_love'), Markup.button.callback('2. like👍', 'fbreact_like')],
+        [Markup.button.callback('↩️ Return Dashboard', 'back_home_inline')]
     ]));
 });
 
-bot.action(/cat_(.+)/, (ctx) => {
-    const platform = ctx.match[1];
-    let buttons = [];
-    if (platform === 'Instagram') {
-        buttons = [[Markup.button.callback('✅ Instagram Likes ❤️', 'view_IG_Likes'), Markup.button.callback('✅ Instagram Followers 👥', 'view_IG_Followers')], [Markup.button.callback('✅ Instagram Views 👁️', 'view_IG_Views'), Markup.button.callback('↩️ Return.', 'back_to_order')]];
-    } else if (platform === 'Facebook') {
-        buttons = [[Markup.button.callback('✅ Facebook Reacts ❤️', 'view_FB_Reacts'), Markup.button.callback('✅ Facebook Followers 👥', 'view_FB_Followers')], [Markup.button.callback('✅ Facebook Views 📈', 'view_FB_Views'), Markup.button.callback('↩️ Return.', 'back_to_order')]];
-    } else if (platform === 'TikTok') {
-        buttons = [[Markup.button.callback('✅ TikTok Views 📈', 'view_TT_Views'), Markup.button.callback('✅ TikTok Likes ❤️', 'view_TT_Likes')], [Markup.button.callback('✅ TikTok Followers 👥', 'view_TT_Followers'), Markup.button.callback('↩️ Return.', 'back_to_order')]];
-    } else if (platform === 'Telegram') {
-        buttons = [[Markup.button.callback('✅ Telegram Members 👥', 'view_TG_Members'), Markup.button.callback('✅ Telegram Views 👁️', 'view_TG_Views')], [Markup.button.callback('✅ Telegram Reactions 😍', 'view_TG_Reacts'), Markup.button.callback('Telegram Combo Pack 🎁', 'view_TG_Combo')], [Markup.button.callback('↩️ Return.', 'back_to_order')]];
-    } else if (platform === 'YouTube') {
-        buttons = [[Markup.button.callback('✅ YouTube Views 📈', 'view_YT_Views'), Markup.button.callback('✅ YouTube Likes 👍', 'view_YT_Likes')], [Markup.button.callback('✅ YouTube Subscribers 👥', 'view_YT_Subs'), Markup.button.callback('↩️ Return.', 'back_to_order')]];
-    }
-    ctx.editMessageText(`🔥 **${platform} Services:**`, Markup.inlineKeyboard(buttons));
-});
+bot.hears('✅ Instagram Likes ❤️', (ctx) => triggerOrderFlow(ctx, 'Instagram Likes', 'IG_Likes', '❯ Enter Your Post Link'));
+bot.hears('✅ Instagram Followers 👥', (ctx) => triggerOrderFlow(ctx, 'Instagram Followers', 'IG_Followers', '❯ Enter Your Profile Link'));
+bot.hears('✅ Instagram Views 👁️', (ctx) => triggerOrderFlow(ctx, 'Instagram Views', 'IG_Views', '❯ Enter Your Post Link'));
 
-// --- SERVICE ITEM CLICK HANDLERS ---
-bot.action(/view_(.+)/, (ctx) => {
-    const userId = ctx.from.id;
-    const subCat = ctx.match[1];
-    
-    if (subCat === 'FB_Reacts') {
-        return ctx.editMessageText('🎭 **Select Reaction Type:**', Markup.inlineKeyboard([
-            [Markup.button.callback('1. love💖', 'fbreact_love'), Markup.button.callback('2. like👍', 'fbreact_like')],
-            [Markup.button.callback('↩️ Return', 'back_to_order')]
-        ]));
-    }
-
-    let serviceLabel = subCat.replace('_', ' ');
-    let promptMsg = '';
-    
-    if (subCat === 'TT_Likes' || subCat === 'TT_Views' || subCat === 'TG_Views' || subCat === 'TG_Reacts' || subCat === 'YT_Views' || subCat === 'YT_Likes' || subCat === 'FB_Views' || subCat === 'IG_Likes' || subCat === 'IG_Views') {
-        promptMsg = '❯ Enter Your Post Link';
-    } else if (subCat === 'TT_Followers') {
-        promptMsg = '❯ Enter Your Profile Link';
-    } else if (subCat === 'TG_Members') {
-        promptMsg = '❯ Enter Your Channel Or Group Link';
-    } else if (subCat === 'TG_Combo') {
-        promptMsg = 'Reacts+Views 1k 10 Taka (Life Time) Super Fast service 💥\n\n❯ আপনার পোস্ট লিঙ্ক দেন 👇🏻';
-    } else if (subCat === 'YT_Subs') {
-        promptMsg = '❯ Enter Your Channel Link';
-    } else if (subCat === 'FB_Followers') {
-        promptMsg = '❯ Enter Your Profile/Page Link';
-    } else if (subCat === 'IG_Followers') {
-        promptMsg = '❯ Enter Your Profile Link';
-    } else {
-        promptMsg = '❯ Enter Link:';
-    }
-
-    adminState[userId] = { step: 'waiting_order_link', serviceName: serviceLabel, serviceKey: subCat };
-    ctx.reply(promptMsg);
-});
-
-// Facebook React Option Interceptors
+// Facebook React Inline Interceptors
 bot.action('fbreact_love', (ctx) => {
     adminState[ctx.from.id] = { step: 'waiting_order_link', serviceName: 'FB Reacts (Love💖)', serviceKey: 'fbreact_love' };
     ctx.reply('❯ Enter Your Post Link');
@@ -144,6 +189,7 @@ bot.action('fbreact_like', (ctx) => {
     adminState[ctx.from.id] = { step: 'waiting_order_link', serviceName: 'FB Reacts (Like👍)', serviceKey: 'fbreact_like' };
     ctx.reply('❯ Enter Your Post Link');
 });
+bot.action('back_home_inline', (ctx) => { ctx.deleteMessage(); });
 
 // --- 4. PRICE & INFO ---
 bot.hears('Price & Info', (ctx) => {
@@ -227,7 +273,7 @@ bot.on('text', (ctx) => {
         return ctx.reply('❯ Enter Quantity (পরিমাণ লিখুন):');
     }
 
-    // Order Quantity step -> Fixed dynamic logic and parsing error parameters
+    // Order Quantity step
     if (adminState[userId] && adminState[userId].step === 'waiting_order_quantity') {
         const qty = parseInt(msg);
         if (isNaN(qty)) return ctx.reply('❌ সঠিক পরিমাণ সংখ্যায় লিখুন।');
@@ -256,7 +302,6 @@ bot.on('text', (ctx) => {
         const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @nhautozone`;
         ctx.reply(orderSuccessMsg);
 
-        // Fixed inline payload structure mapping parameters via explicit data transfer to capture the cost parameter easily inside callback parsing
         const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification\n${adminState[userId].serviceName}\n💰 Cost: ${structuralCost.toFixed(2)} Tk`;
         
         bot.telegram.sendMessage(ADMIN_GROUP_ID, groupPayload, Markup.inlineKeyboard([
@@ -310,7 +355,6 @@ bot.action(/approve_(.+)_(.+)/, (ctx) => {
     ctx.answerCbQuery('Order successfully confirmed!', { show_alert: false });
 });
 
-// Fixed Order Cancellation: Extract precise structural dynamic cost logic parameters to roll back user account instantly
 bot.action(/reject_(.+)_(.+)_cost_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
     const orderId = ctx.match[2];
@@ -318,7 +362,6 @@ bot.action(/reject_(.+)_(.+)_cost_(.+)/, (ctx) => {
 
     if (!userStats[targetUserId]) userStats[targetUserId] = { balance: 2.00, orders: 0, spent: 0.00 };
     
-    // Reverse balance deduction logic updates
     let oldBalance = parseFloat(userStats[targetUserId].balance || 0);
     let oldSpent = parseFloat(userStats[targetUserId].spent || 0);
     
@@ -400,24 +443,9 @@ bot.action('go_deposit', (ctx) => {
     ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨𝗡𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
 });
 
-bot.action('back_to_order', (ctx) => { 
-    ctx.editMessageText('🏠 **Select your service.**', Markup.inlineKeyboard([
-        [Markup.button.callback('TikTok Services', 'cat_TikTok'), Markup.button.callback('Telegram Services', 'cat_Telegram')],
-        [Markup.button.callback('YouTube Services', 'cat_YouTube'), Markup.button.callback('FaceBook Services', 'cat_Facebook')],
-        [Markup.button.callback('InstaGram Services', 'cat_Instagram'), Markup.button.callback('🌐 Premium service', 'premium_service')],
-        [Markup.button.callback('↩️ Return', 'back_home')]
-    ])); 
-});
-
-bot.action('premium_service', (ctx) => {
-    ctx.answerCbQuery('Premium service ekhono available noy!', { show_alert: true });
-});
-
 bot.action('back_to_price', (ctx) => { 
     ctx.editMessageText('🐢 **Select category to see price:**', Markup.inlineKeyboard([[Markup.button.callback('Telegram', 'p_Telegram'), Markup.button.callback('Facebook', 'p_Facebook')], [Markup.button.callback('Instagram', 'p_Instagram'), Markup.button.callback('TikTok', 'p_TikTok')], [Markup.button.callback('YouTube', 'p_YouTube')]])); 
 });
-
-bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Menu', mainKeyboard); });
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
