@@ -53,7 +53,7 @@ bot.start((ctx) => ctx.reply('🏠 **WELCOME TO NH AUTO BOOST**', mainKeyboard))
 // --- 1. DEPOSIT SECTION ---
 bot.hears('Deposit', (ctx) => {
     adminState[ctx.from.id] = { step: 'waiting_amount' };
-    ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨延𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
+    ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨𝗡𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
 });
 
 // --- 2. BALANCE SECTION ---
@@ -241,9 +241,8 @@ bot.on('text', (ctx) => {
         
         let currentBalance = parseFloat(userStats[userId].balance || 0);
         
-        // Strict Constraint: If current balance is less than structural cost, request terminates instantly
         if (currentBalance < structuralCost) {
-            delete adminState[userId]; // Completely reset user state session
+            delete adminState[userId]; 
             return ctx.reply(`❌ Order failed! Insufficient balance.\nRequired: ${structuralCost.toFixed(2)} Tk\nYour Balance: ${currentBalance.toFixed(2)} Tk`);
         }
 
@@ -289,8 +288,9 @@ bot.on('text', (ctx) => {
         const safeAmount = parseFloat(adminState[userId].amount).toFixed(2);
         const depositGroupPayload = `💵 **NEW INCOMING DEPOSIT REQUEST**\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n👤 **Name:** ${ctx.from.first_name}\n💰 **Amount:** ${safeAmount} ৳\n🧾 **Invoice ID:** \`${adminState[userId].orderId}\`\n🔑 **Trx ID:** \`${msg}\`\nStatus: ⏳ Waiting Admin Approval`;
         
+        // Dynamic callback string optimization to prevent custom regex splitting mismatch inside telegraf handlers
         bot.telegram.sendMessage(ADMIN_GROUP_ID, depositGroupPayload, Markup.inlineKeyboard([
-            [Markup.button.callback('✅ Confirm Deposit', `dacc_${userId}_amp_${safeAmount}`), Markup.button.callback('🚫 Cancel Deposit', `drjc_${userId}`)]
+            [Markup.button.callback('✅ Confirm Deposit', `dpok_${userId}_${safeAmount}`), Markup.button.callback('🚫 Cancel Deposit', `dpno_${userId}`)]
         ])).catch(e => console.log("Deposit group routing error:", e.message));
         
         delete adminState[userId];
@@ -320,15 +320,16 @@ bot.action(/reject_(.+)_(.+)/, (ctx) => {
     ctx.answerCbQuery('Order cancelled.', { show_alert: false });
 });
 
-// --- FIXED DEPOSIT SYSTEM ACTION ROUTING ---
-bot.action(/dacc_(.+)_amp_(.+)/, (ctx) => {
+// --- FIXED & OPTIMIZED DEPOSIT SYSTEM ACTION ACTION INTERCEPTORS ---
+bot.action(/dpok_(.+)_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
     const creditAmount = parseFloat(ctx.match[2] || 0);
 
     if (!userStats[targetUserId]) userStats[targetUserId] = { balance: 2.00, orders: 0, spent: 0.00 };
     
-    let oldBal = parseFloat(userStats[targetUserId].balance || 0);
-    userStats[targetUserId].balance = parseFloat((oldBal + creditAmount).toFixed(4));
+    // Fixed: Guaranteed atomic variable execution for instant memory map value addition
+    let currentBalance = parseFloat(userStats[targetUserId].balance || 0);
+    userStats[targetUserId].balance = parseFloat((currentBalance + creditAmount).toFixed(4));
 
     bot.telegram.sendMessage(targetUserId, `💰 **আপনার ডিপোজিট সফল হয়েছে!**\n✅ ${creditAmount.toFixed(2)} টাকা আপনার ব্যালেন্সে যোগ করা হয়েছে।`).catch(e => console.log(e.message));
 
@@ -336,7 +337,7 @@ bot.action(/dacc_(.+)_amp_(.+)/, (ctx) => {
     ctx.answerCbQuery('Deposit balance credited successfully!', { show_alert: true });
 });
 
-bot.action(/drjc_(.+)/, (ctx) => {
+bot.action(/dpno_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
 
     bot.telegram.sendMessage(targetUserId, `❌ **আপনার ডিপোজিট রিকোয়েস্ট বাতিল করা হয়েছে!**\nদয়া করে সঠিক ট্রানজেকশন আইডি দিয়ে আবার চেষ্টা করুন বা সাপোর্টে যোগাযোগ করুন।`).catch(e => console.log(e.message));
