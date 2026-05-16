@@ -63,7 +63,7 @@ bot.hears('Balance', (ctx) => {
     if (!userStats[userId]) userStats[userId] = { balance: 2.00, orders: 0, spent: 0.00 };
     const stats = userStats[userId];
 
-    const balanceMsg = `💳 ▬▬▬▬▬▬▬▬▬▬\n     **অ্যাকাউন্ট ব্যালেন্স**\n▬▬▬▬▬▬▬▬▬▬▬\n\n👤 **নাম :** ${name}\n💰 **বর্তমান ব্যালেন্স :** ${stats.balance.toFixed(2)} টাকা\n📦 **Total Orders :** ${stats.orders}\n💵 **Total Spent :** ${stats.spent.toFixed(2)} টাকা\n\n▬▬▬▬▬▬▬▬▬▬▬`;
+    const balanceMsg = `💳 ▬▬▬▬▬▬▬▬▬▬\n     **অ্যাকাউন্ট ব্যালেন্স**\n▬▬▬▬▬▬▬▬▬▬▬\n\n👤 **নাম :** ${name}\n💰 **বর্তমান ব্যালেন্স :** ${parseFloat(stats.balance).toFixed(2)} টাকা\n📦 **Total Orders :** ${stats.orders}\n💵 **Total Spent :** ${parseFloat(stats.spent).toFixed(2)} টাকা\n\n▬▬▬▬▬▬▬▬▬▬▬`;
 
     ctx.reply(balanceMsg, {
         parse_mode: 'Markdown',
@@ -98,12 +98,11 @@ bot.action(/cat_(.+)/, (ctx) => {
     ctx.editMessageText(`🔥 **${platform} Services:**`, Markup.inlineKeyboard(buttons));
 });
 
-// --- SERVICE ITEM CLICK HANDLERS (Custom UI Routing with Exact Service Tracking) ---
+// --- SERVICE ITEM CLICK HANDLERS ---
 bot.action(/view_(.+)/, (ctx) => {
     const userId = ctx.from.id;
     const subCat = ctx.match[1];
     
-    // Facebook React custom selection step
     if (subCat === 'FB_Reacts') {
         return ctx.editMessageText('🎭 **Select Reaction Type:**', Markup.inlineKeyboard([
             [Markup.button.callback('1. love💖', 'fbreact_love'), Markup.button.callback('2. like👍', 'fbreact_like')],
@@ -164,7 +163,7 @@ bot.action(/p_(.+)/, (ctx) => {
     });
 });
 
-// --- 5. TEXT INPUT HANDLER (Deposit & Admin & Order Processing) ---
+// --- 5. TEXT INPUT HANDLER ---
 bot.on('text', (ctx) => {
     const userId = ctx.from.id;
     const msg = ctx.message.text;
@@ -228,39 +227,34 @@ bot.on('text', (ctx) => {
         return ctx.reply('❯ Enter Quantity (পরিমাণ লিখুন):');
     }
 
-    // Order Quantity step -> Process Balance verification and calculation logic
+    // Order Quantity step -> Fixed dynamic logic and parsing error parameters
     if (adminState[userId] && adminState[userId].step === 'waiting_order_quantity') {
         const qty = parseInt(msg);
         if (isNaN(qty)) return ctx.reply('❌ সঠিক পরিমাণ সংখ্যায় লিখুন।');
-        
-        // Strict Constraint: Minimum Order Quantity 100
         if (qty < 100) return ctx.reply('❌ Minimum quantity is 100! Please enter 100 or more.');
         
-        // Dynamic Price Logic calculation
         const sKey = adminState[userId].serviceKey || 'TG_Views';
-        const base1kRate = serviceRates[sKey] || 5.0; // Defaults safely to 5 tk per 1k if missing
-        const structuralCost = (base1kRate * qty) / 1000;
+        const base1kRate = parseFloat(serviceRates[sKey] || 5.0);
+        const structuralCost = parseFloat((base1kRate * qty) / 1000);
 
-        // Initialize statistics record validation if missing
         if (!userStats[userId]) userStats[userId] = { balance: 2.00, orders: 0, spent: 0.00 };
         
-        // Absolute Financial Guardrail Check
-        if (userStats[userId].balance < structuralCost) {
-            return ctx.reply(`❌ Order failed! Insufficient balance.\nRequired: ${structuralCost.toFixed(2)} Tk\nYour Balance: ${userStats[userId].balance.toFixed(2)} Tk`);
+        // Fixed: Ensure comparison works flawlessly by matching numeric float values safely
+        let currentBalance = parseFloat(userStats[userId].balance || 0);
+        if (currentBalance < structuralCost) {
+            return ctx.reply(`❌ Order failed! Insufficient balance.\nRequired: ${structuralCost.toFixed(2)} Tk\nYour Balance: ${currentBalance.toFixed(2)} Tk`);
         }
 
-        // Deduct balance and update system data variables securely
-        userStats[userId].balance -= structuralCost;
-        userStats[userId].spent += structuralCost;
+        // Safe Deduction logic execution 
+        userStats[userId].balance = parseFloat((currentBalance - structuralCost).toFixed(4));
+        userStats[userId].spent = parseFloat((parseFloat(userStats[userId].spent || 0) + structuralCost).toFixed(4));
         userStats[userId].orders += 1;
 
         const generatedOrderId = Math.floor(100000 + Math.random() * 900000);
 
-        // Success receipt to user 
         const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @nhautozone`;
         ctx.reply(orderSuccessMsg);
 
-        // Verification routing to Admin Validation Group (-1003893464734)
         const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification\n${adminState[userId].serviceName}\n💰 Cost: ${structuralCost.toFixed(2)} Tk`;
         
         bot.telegram.sendMessage(ADMIN_GROUP_ID, groupPayload, Markup.inlineKeyboard([
@@ -286,14 +280,16 @@ bot.on('text', (ctx) => {
         return ctx.reply(summary);
     }
 
-    // Waiting for Transaction ID submission -> Routed directly into Dedicated Admin Group with interactive actions
+    // Waiting for Transaction ID submission
     if (adminState[userId] && adminState[userId].step === 'waiting_trx') {
         ctx.reply(`⚡ **আপনার ট্রানজেকশন আইডি (${msg}) সাবমিট হয়েছে!**\nএডমিন ভেরিফাই করে কিছুক্ষণের মধ্যে ব্যালেন্স যোগ করে দেবে।`);
         
-        const depositGroupPayload = `💵 **NEW INCOMING DEPOSIT REQUEST**\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n👤 **Name:** ${ctx.from.first_name}\n💰 **Amount:** ${adminState[userId].amount.toFixed(2)} ৳\n🧾 **Invoice ID:** \`${adminState[userId].orderId}\`\n🔑 **Trx ID:** \`${msg}\`\nStatus: ⏳ Waiting Admin Approval`;
+        // Fixed callback formatting prefix injection to prevent string parsing bugs in button callback string data
+        const safeAmount = parseFloat(adminState[userId].amount).toFixed(2);
+        const depositGroupPayload = `💵 **NEW INCOMING DEPOSIT REQUEST**\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n👤 **Name:** ${ctx.from.first_name}\n💰 **Amount:** ${safeAmount} ৳\n🧾 **Invoice ID:** \`${adminState[userId].orderId}\`\n🔑 **Trx ID:** \`${msg}\`\nStatus: ⏳ Waiting Admin Approval`;
         
         bot.telegram.sendMessage(ADMIN_GROUP_ID, depositGroupPayload, Markup.inlineKeyboard([
-            [Markup.button.callback('✅ Confirm Deposit', `dep_approve_${userId}_${adminState[userId].amount}`), Markup.button.callback('🚫 Cancel Deposit', `dep_reject_${userId}`)]
+            [Markup.button.callback('✅ Confirm Deposit', `dacc_${userId}_amp_${safeAmount}`), Markup.button.callback('🚫 Cancel Deposit', `drjc_${userId}`)]
         ])).catch(e => console.log("Deposit group routing error:", e.message));
         
         delete adminState[userId];
@@ -323,13 +319,16 @@ bot.action(/reject_(.+)_(.+)/, (ctx) => {
     ctx.answerCbQuery('Order cancelled.', { show_alert: false });
 });
 
-// --- DEPOSIT CONFIRM / CANCEL BUTTON HANDLERS INSIDE ADMIN GROUP ---
-bot.action(/dep_approve_(.+)_(.+)/, (ctx) => {
+// --- FIXED DEPOSIT SYSTEM ACTION ROUTING ---
+bot.action(/dacc_(.+)_amp_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
-    const creditAmount = parseFloat(ctx.match[2]);
+    const creditAmount = parseFloat(ctx.match[2] || 0);
 
     if (!userStats[targetUserId]) userStats[targetUserId] = { balance: 2.00, orders: 0, spent: 0.00 };
-    userStats[targetUserId].balance += creditAmount; // Safely add cash balance to account
+    
+    // Fixed numeric mutation parsing to add funds instantly to memory state map variables
+    let oldBal = parseFloat(userStats[targetUserId].balance || 0);
+    userStats[targetUserId].balance = parseFloat((oldBal + creditAmount).toFixed(4));
 
     bot.telegram.sendMessage(targetUserId, `💰 **আপনার ডিপোজিট সফল হয়েছে!**\n✅ ${creditAmount.toFixed(2)} টাকা আপনার ব্যালেন্সে যোগ করা হয়েছে।`).catch(e => console.log(e.message));
 
@@ -337,7 +336,7 @@ bot.action(/dep_approve_(.+)_(.+)/, (ctx) => {
     ctx.answerCbQuery('Deposit balance credited successfully!', { show_alert: true });
 });
 
-bot.action(/dep_reject_(.+)/, (ctx) => {
+bot.action(/drjc_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
 
     bot.telegram.sendMessage(targetUserId, `❌ **আপনার ডিপোজিট রিকোয়েস্ট বাতিল করা হয়েছে!**\nদয়া করে সঠিক ট্রানজেকশন আইডি দিয়ে আবার চেষ্টা করুন বা সাপোর্টে যোগাযোগ করুন।`).catch(e => console.log(e.message));
