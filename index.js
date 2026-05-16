@@ -3,7 +3,10 @@ const http = require('http');
 
 // Updated with your new bot token
 const bot = new Telegraf('8255693337:AAEOHh2xoiOwoR-K3ndLGtui8dmbGcgVlJ0');
-const ADMIN_ID = 7488161246;
+
+// Initial setup with your primary account as global supervisor
+let admins = [7488161246]; 
+let adminState = {};
 
 // --- DATABASE & SETTINGS ---
 let servicesDB = { 
@@ -15,7 +18,6 @@ let servicesDB = {
 };
 
 let userStats = {}; 
-let adminState = {};
 
 // Admin adjustable wallet numbers
 let bkashNumber = "01897846165";
@@ -119,7 +121,7 @@ bot.on('text', (ctx) => {
     const msg = ctx.message.text;
 
     // Fixed Admin Command Text Processing
-    if (adminState[userId] && userId === ADMIN_ID) {
+    if (adminState[userId] && admins.includes(userId)) {
         if (adminState[userId].step === 'editing_bkash') {
             bkashNumber = msg;
             delete adminState[userId];
@@ -129,6 +131,28 @@ bot.on('text', (ctx) => {
             nagadNumber = msg;
             delete adminState[userId];
             return ctx.reply(`✅ Nagad number updated to: ${msg}`);
+        }
+        if (adminState[userId].step === 'adding_admin') {
+            const targetId = parseInt(msg);
+            if (isNaN(targetId)) return ctx.reply('❌ দয়া করে শুধুমাত্র সঠিক Numerical ID টি পাঠান।');
+            if (admins.includes(targetId)) return ctx.reply('⚠️ এই আইডিটি ইতিমধ্যেই এডমিন লিস্টে আছে।');
+            admins.push(targetId);
+            delete adminState[userId];
+            return ctx.reply(`✅ সফলভাবে এডমিন যোগ করা হয়েছে! নতুন এডমিন আইডি: ${targetId}`);
+        }
+        if (adminState[userId].step === 'removing_admin') {
+            const targetId = parseInt(msg);
+            if (isNaN(targetId)) return ctx.reply('❌ দয়া করে শুধুমাত্র সঠিক Numerical ID টি পাঠান।');
+            if (targetId === 7488161246) return ctx.reply('❌ মূল সুপারভাইজার আইডি রিমুভ করা সম্ভব নয়!');
+            
+            const index = admins.indexOf(targetId);
+            if (index > -1) {
+                admins.splice(index, 1);
+                delete adminState[userId];
+                return ctx.reply(`✅ সফলভাবে আইডি: ${targetId} কে এডমিন লিস্ট থেকে রিমুভ করা হয়েছে।`);
+            } else {
+                return ctx.reply('❌ এই আইডিটি এডমিন লিস্টে খুঁজে পাওয়া যায়নি।');
+            }
         }
     }
 
@@ -150,7 +174,12 @@ bot.on('text', (ctx) => {
     // Waiting for Transaction ID submission
     if (adminState[userId] && adminState[userId].step === 'waiting_trx') {
         ctx.reply(`⚡ **আপনার ট্রানজেকশন আইডি (${msg}) সাবমিট হয়েছে!**\nএডমিন ভেরিফাই করে কিছুক্ষণের মধ্যে ব্যালেন্স যোগ করে দেবে।`);
-        bot.telegram.sendMessage(ADMIN_ID, `🔔 **New Deposit Request!**\n\n👤 User: ${ctx.from.first_name} (${userId})\n💰 Amount: ${adminState[userId].amount}৳\n🧾 Order ID: ${adminState[userId].orderId}\n🔑 Trx ID: ${msg}`);
+        
+        // Broadcast to all authorized administrators
+        admins.forEach(adminId => {
+            bot.telegram.sendMessage(adminId, `🔔 **New Deposit Request!**\n\n👤 User: ${ctx.from.first_name} (${userId})\n💰 Amount: ${adminState[userId].amount}৳\n🧾 Order ID: ${adminState[userId].orderId}\n🔑 Trx ID: ${msg}`).catch(e => console.log(e.message));
+        });
+        
         delete adminState[userId];
         return;
     }
@@ -158,25 +187,40 @@ bot.on('text', (ctx) => {
 
 // --- 6. ADMIN CONTROL PANEL ---
 bot.command('admin', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) {
-        return ctx.reply('❌ Apni ei bot-er admin non!');
+    const userId = ctx.from.id;
+    if (!admins.includes(userId)) {
+        return ctx.reply(`❌ Apni ei bot-er admin non!\n\n💡 আপনার ইউজার আইডি: ${userId}\n(এডমিন প্যানেল এক্সেস করতে এই আইডিটি সেট থাকতে হবে)`);
     }
     ctx.reply('🛠 **ADMIN CONTROL PANEL**', Markup.inlineKeyboard([
         [Markup.button.callback('📱 Edit bKash Number', 'edit_bkash')],
-        [Markup.button.callback('📱 Edit Nagad Number', 'edit_nagad')]
+        [Markup.button.callback('📱 Edit Nagad Number', 'edit_nagad')],
+        [Markup.button.callback('➕ Add New Admin', 'add_admin_panel')],
+        [Markup.button.callback('🗑 Remove Admin', 'remove_admin_panel')]
     ]));
 });
 
 bot.action('edit_bkash', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (!admins.includes(ctx.from.id)) return;
     adminState[ctx.from.id] = { step: 'editing_bkash' };
     ctx.reply('📞 নতুন bKash নাম্বারটি লিখে পাঠান:');
 });
 
 bot.action('edit_nagad', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (!admins.includes(ctx.from.id)) return;
     adminState[ctx.from.id] = { step: 'editing_nagad' };
     ctx.reply('📞 নতুন Nagad নাম্বারটি লিখে পাঠান:');
+});
+
+bot.action('add_admin_panel', (ctx) => {
+    if (!admins.includes(ctx.from.id)) return;
+    adminState[ctx.from.id] = { step: 'adding_admin' };
+    ctx.reply('👤 যে ইউজারকে এডমিন বানাতে চান তার Numerical Telegram ID টি লিখে পাঠান:');
+});
+
+bot.action('remove_admin_panel', (ctx) => {
+    if (!admins.includes(ctx.from.id)) return;
+    adminState[ctx.from.id] = { step: 'removing_admin' };
+    ctx.reply('🗑 যে এডমিন আইডিটি রিমুভ করতে চান তা লিখে পাঠান:');
 });
 
 bot.action('go_deposit', (ctx) => {
@@ -196,4 +240,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-    
+        
