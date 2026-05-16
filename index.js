@@ -53,7 +53,7 @@ bot.start((ctx) => ctx.reply('🏠 **WELCOME TO NH AUTO BOOST**', mainKeyboard))
 // --- 1. DEPOSIT SECTION ---
 bot.hears('Deposit', (ctx) => {
     adminState[ctx.from.id] = { step: 'waiting_amount' };
-    ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨𝗡𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
+    ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨延𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
 });
 
 // --- 2. BALANCE SECTION ---
@@ -239,9 +239,11 @@ bot.on('text', (ctx) => {
 
         if (!userStats[userId]) userStats[userId] = { balance: 2.00, orders: 0, spent: 0.00 };
         
-        // Fixed: Ensure comparison works flawlessly by matching numeric float values safely
         let currentBalance = parseFloat(userStats[userId].balance || 0);
+        
+        // Strict Constraint: If current balance is less than structural cost, request terminates instantly
         if (currentBalance < structuralCost) {
+            delete adminState[userId]; // Completely reset user state session
             return ctx.reply(`❌ Order failed! Insufficient balance.\nRequired: ${structuralCost.toFixed(2)} Tk\nYour Balance: ${currentBalance.toFixed(2)} Tk`);
         }
 
@@ -284,7 +286,6 @@ bot.on('text', (ctx) => {
     if (adminState[userId] && adminState[userId].step === 'waiting_trx') {
         ctx.reply(`⚡ **আপনার ট্রানজেকশন আইডি (${msg}) সাবমিট হয়েছে!**\nএডমিন ভেরিফাই করে কিছুক্ষণের মধ্যে ব্যালেন্স যোগ করে দেবে।`);
         
-        // Fixed callback formatting prefix injection to prevent string parsing bugs in button callback string data
         const safeAmount = parseFloat(adminState[userId].amount).toFixed(2);
         const depositGroupPayload = `💵 **NEW INCOMING DEPOSIT REQUEST**\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n👤 **Name:** ${ctx.from.first_name}\n💰 **Amount:** ${safeAmount} ৳\n🧾 **Invoice ID:** \`${adminState[userId].orderId}\`\n🔑 **Trx ID:** \`${msg}\`\nStatus: ⏳ Waiting Admin Approval`;
         
@@ -326,7 +327,6 @@ bot.action(/dacc_(.+)_amp_(.+)/, (ctx) => {
 
     if (!userStats[targetUserId]) userStats[targetUserId] = { balance: 2.00, orders: 0, spent: 0.00 };
     
-    // Fixed numeric mutation parsing to add funds instantly to memory state map variables
     let oldBal = parseFloat(userStats[targetUserId].balance || 0);
     userStats[targetUserId].balance = parseFloat((oldBal + creditAmount).toFixed(4));
 
