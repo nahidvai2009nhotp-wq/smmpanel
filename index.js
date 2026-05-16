@@ -1,7 +1,8 @@
 const { Telegraf, Markup } = require('telegraf');
 const http = require('http');
 
-const bot = new Telegraf('8899621376:AAFcaWoRVw4QiS74vrsAPvFZxNbnBCEmOF4');
+// Updated with your new bot token
+const bot = new Telegraf('8255693337:AAEOHh2xoiOwoR-K3ndLGtui8dmbGcgVlJ0');
 const ADMIN_ID = 7488161246;
 
 // --- DATABASE & SETTINGS ---
@@ -112,12 +113,12 @@ bot.action(/p_(.+)/, (ctx) => {
     });
 });
 
-// --- 5. TEXT INPUT HANDLER (Deposit Logic & Number Configuration) ---
+// --- 5. TEXT INPUT HANDLER (Deposit & Admin Input System) ---
 bot.on('text', (ctx) => {
     const userId = ctx.from.id;
     const msg = ctx.message.text;
 
-    // Admin state configurations
+    // Fixed Admin Command Text Processing
     if (adminState[userId] && userId === ADMIN_ID) {
         if (adminState[userId].step === 'editing_bkash') {
             bkashNumber = msg;
@@ -131,7 +132,7 @@ bot.on('text', (ctx) => {
         }
     }
 
-    // User state deposit setup
+    // User State Deposit Processing
     if (adminState[userId] && adminState[userId].step === 'waiting_amount') {
         const amount = parseFloat(msg);
         if (isNaN(amount)) return ctx.reply('❌ সংখায় লিখুন।');
@@ -140,7 +141,6 @@ bot.on('text', (ctx) => {
         const orderId = Math.floor(10000000 + Math.random() * 90000000);
         const name = ctx.from.first_name || "Toxic";
         
-        // Dynamic formatting matching your text blueprint
         const summary = `✅ **পেমেন্ট লিংক তৈরি হয়েছে**\n━━━━━━━━━━━━━━\n\n👤 **নাম:** ${name}\n💰 **পরিমাণ:** ${amount.toFixed(2)}৳\n➕ **মোট যোগ হবে:** ${amount.toFixed(2)}৳\n🧾 **অর্ডার আইডি:** ${orderId}\nBKASH:${bkashNumber}\nNAGAD:${nagadNumber}\n\n👉 **পেমেন্ট করে নিচে ট্রানজেকশন আইডি লিখুন**\n━━━━━━━━━━━━━━`;
         
         adminState[userId] = { step: 'waiting_trx', amount: amount, orderId: orderId };
@@ -158,7 +158,9 @@ bot.on('text', (ctx) => {
 
 // --- 6. ADMIN CONTROL PANEL ---
 bot.command('admin', (ctx) => {
-    if (ctx.from.id !== ADMIN_ID) return;
+    if (ctx.from.id !== ADMIN_ID) {
+        return ctx.reply('❌ Apni ei bot-er admin non!');
+    }
     ctx.reply('🛠 **ADMIN CONTROL PANEL**', Markup.inlineKeyboard([
         [Markup.button.callback('📱 Edit bKash Number', 'edit_bkash')],
         [Markup.button.callback('📱 Edit Nagad Number', 'edit_nagad')]
@@ -166,11 +168,13 @@ bot.command('admin', (ctx) => {
 });
 
 bot.action('edit_bkash', (ctx) => {
+    if (ctx.from.id !== ADMIN_ID) return;
     adminState[ctx.from.id] = { step: 'editing_bkash' };
     ctx.reply('📞 নতুন bKash নাম্বারটি লিখে পাঠান:');
 });
 
 bot.action('edit_nagad', (ctx) => {
+    if (ctx.from.id !== ADMIN_ID) return;
     adminState[ctx.from.id] = { step: 'editing_nagad' };
     ctx.reply('📞 নতুন Nagad নাম্বারটি লিখে পাঠান:');
 });
@@ -192,3 +196,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
+    
