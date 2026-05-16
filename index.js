@@ -1,7 +1,7 @@
 const { Telegraf, Markup } = require('telegraf');
 const http = require('http');
 
-const bot = new Telegraf('8255693337:AAEOHh2xoiOwoR-K3ndLGtui8dmbGcgVlJ0');
+const bot = new Telegraf('8899621376:AAFcaWoRVw4QiS74vrsAPvFZxNbnBCEmOF4');
 const ADMIN_ID = 7488161246;
 
 // --- DATABASE & SETTINGS ---
@@ -14,8 +14,11 @@ let servicesDB = {
 };
 
 let userStats = {}; 
-let depositLink = "https://rx-payment-gateway.example.com"; // Ekhane apnar video-r oi payment webpage link-ti boshaben
 let adminState = {};
+
+// Admin adjustable wallet numbers
+let bkashNumber = "01897846165";
+let nagadNumber = "0101001010";
 
 let priceInfo = {
     'Telegram': "🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — 1 Taka\n❤️ 1K Reacts — 8 Taka\n👥 1K Members — 15 Taka",
@@ -34,7 +37,7 @@ const mainKeyboard = Markup.keyboard([
 
 bot.start((ctx) => ctx.reply('🏠 **WELCOME TO NH AUTO BOOST**', mainKeyboard));
 
-// --- 1. DEPOSIT SECTION (Video UI Match) ---
+// --- 1. DEPOSIT SECTION ---
 bot.hears('Deposit', (ctx) => {
     adminState[ctx.from.id] = { step: 'waiting_amount' };
     ctx.reply(`━━━━━━━━━━━━━━━━━━━━\n💳 **𝗗𝗘𝗣𝗢𝗦𝗜𝗧 𝗔𝗠𝗢𝗨𝗡𝗧**\n━━━━━━━━━━━━━━━━━━━━\n\nআপনি কত টাকা ডিপোজিট করতে চান?\nশুধু টাকার পরিমাণটি লিখে পাঠান।👇`);
@@ -109,56 +112,67 @@ bot.action(/p_(.+)/, (ctx) => {
     });
 });
 
-// --- 5. TEXT INPUT HANDLER (Payment Gateway Integration) ---
+// --- 5. TEXT INPUT HANDLER (Deposit Logic & Number Configuration) ---
 bot.on('text', (ctx) => {
     const userId = ctx.from.id;
     const msg = ctx.message.text;
 
+    // Admin state configurations
     if (adminState[userId] && userId === ADMIN_ID) {
-        if (adminState[userId].step === 'editing_link') {
-            depositLink = msg;
+        if (adminState[userId].step === 'editing_bkash') {
+            bkashNumber = msg;
             delete adminState[userId];
-            return ctx.reply('✅ Deposit link updated!');
+            return ctx.reply(`✅ bKash number updated to: ${msg}`);
+        }
+        if (adminState[userId].step === 'editing_nagad') {
+            nagadNumber = msg;
+            delete adminState[userId];
+            return ctx.reply(`✅ Nagad number updated to: ${msg}`);
         }
     }
 
+    // User state deposit setup
     if (adminState[userId] && adminState[userId].step === 'waiting_amount') {
         const amount = parseFloat(msg);
         if (isNaN(amount)) return ctx.reply('❌ সংখায় লিখুন।');
-        
-        // 1 likhle error, 10 likhle summary
-        if (amount < 10) {
-            return ctx.reply('❌ Minimum amount 10 taka');
-        }
+        if (amount < 10) return ctx.reply('❌ Minimum amount 10 taka');
 
         const orderId = Math.floor(10000000 + Math.random() * 90000000);
         const name = ctx.from.first_name || "Toxic";
         
-        const summary = `✅ **পেমেন্ট লিংক তৈরি হয়েছে**\n━━━━━━━━━━━━━━\n\n👤 **নাম:** ${name}\n💰 **পরিমাণ:** ${amount.toFixed(2)}৳\n➕ **মোট যোগ হবে:** ${amount.toFixed(2)}৳\n🧾 **অর্ডার আইডি:** ${orderId}\n\n👉 **পেমেন্ট করতে নিচের বাটনে ক্লিক করুন।**\n━━━━━━━━━━━━━━`;
+        // Dynamic formatting matching your text blueprint
+        const summary = `✅ **পেমেন্ট লিংক তৈরি হয়েছে**\n━━━━━━━━━━━━━━\n\n👤 **নাম:** ${name}\n💰 **পরিমাণ:** ${amount.toFixed(2)}৳\n➕ **মোট যোগ হবে:** ${amount.toFixed(2)}৳\n🧾 **অর্ডার আইডি:** ${orderId}\nBKASH:${bkashNumber}\nNAGAD:${nagadNumber}\n\n👉 **পেমেন্ট করে নিচে ট্রানজেকশন আইডি লিখুন**\n━━━━━━━━━━━━━━`;
         
+        adminState[userId] = { step: 'waiting_trx', amount: amount, orderId: orderId };
+        return ctx.reply(summary);
+    }
+
+    // Waiting for Transaction ID submission
+    if (adminState[userId] && adminState[userId].step === 'waiting_trx') {
+        ctx.reply(`⚡ **আপনার ট্রানজেকশন আইডি (${msg}) সাবমিট হয়েছে!**\nএডমিন ভেরিফাই করে কিছুক্ষণের মধ্যে ব্যালেন্স যোগ করে দেবে।`);
+        bot.telegram.sendMessage(ADMIN_ID, `🔔 **New Deposit Request!**\n\n👤 User: ${ctx.from.first_name} (${userId})\n💰 Amount: ${adminState[userId].amount}৳\n🧾 Order ID: ${adminState[userId].orderId}\n🔑 Trx ID: ${msg}`);
         delete adminState[userId];
-        return ctx.reply(summary, {
-            parse_mode: 'Markdown',
-            ...Markup.inlineKeyboard([
-                [Markup.button.url('💳 Bkash/Nogod Pay', depositLink)], // Click korle video-r moto webpage khulbe
-                [Markup.button.url('🌍 Binance Pay', depositLink)],
-                [Markup.button.url('❓ ডিপোজিট করার নিয়ম', 'https://t.me/support')]
-            ])
-        });
+        return;
     }
 });
 
-// --- 6. ADMIN & NAVIGATION ---
+// --- 6. ADMIN CONTROL PANEL ---
 bot.command('admin', (ctx) => {
     if (ctx.from.id !== ADMIN_ID) return;
-    ctx.reply('🛠 **ADMIN PANEL**', Markup.inlineKeyboard([
-        [Markup.button.callback('🔗 Change Payment Link', 'admin_edit_link')]
+    ctx.reply('🛠 **ADMIN CONTROL PANEL**', Markup.inlineKeyboard([
+        [Markup.button.callback('📱 Edit bKash Number', 'edit_bkash')],
+        [Markup.button.callback('📱 Edit Nagad Number', 'edit_nagad')]
     ]));
 });
 
-bot.action('admin_edit_link', (ctx) => {
-    adminState[ctx.from.id] = { step: 'editing_link' };
-    ctx.reply('🔗 নতুন পেমেন্ট গেটওয়ে লিঙ্কটি পাঠান (Webpage Link):');
+bot.action('edit_bkash', (ctx) => {
+    adminState[ctx.from.id] = { step: 'editing_bkash' };
+    ctx.reply('📞 নতুন bKash নাম্বারটি লিখে পাঠান:');
+});
+
+bot.action('edit_nagad', (ctx) => {
+    adminState[ctx.from.id] = { step: 'editing_nagad' };
+    ctx.reply('📞 নতুন Nagad নাম্বারটি লিখে পাঠান:');
 });
 
 bot.action('go_deposit', (ctx) => {
@@ -178,4 +192,3 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-        
