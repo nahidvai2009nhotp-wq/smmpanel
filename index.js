@@ -7,7 +7,7 @@ const bot = new Telegraf('8255693337:AAEOHh2xoiOwoR-K3ndLGtui8dmbGcgVlJ0');
 // Initial setup with your primary account as global supervisor
 let admins = [7488161246]; 
 let adminState = {};
-const ADMIN_GROUP_ID = -1003893464734; // Your Updated Dedicated Admin Verification Group ID
+const ADMIN_GROUP_ID = -1003893464734; // Your Dedicated Admin Verification Group ID
 
 // --- DATABASE & SETTINGS ---
 let servicesDB = { 
@@ -30,6 +30,15 @@ let priceInfo = {
     'Instagram': "🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — 1 Taka\n❤️ 1K Likes — 20 Taka\n⭐ 1K Followers — 45 Taka",
     'TikTok': "⚫ 𝗧𝗜𝗞𝗧𝗢𝗞\n\n👁️ 1K Views — 3 Taka\n👍 1K Likes — 10 Taka\n⭐ 1K Followers — 150 Tk",
     'YouTube': "🔴 𝗬𝗢𝗨𝗧𝗨𝗕𝗘\n\n👍 1K Likes — 60 Taka\n🔔 1K Subscribers — 140 Tk\n▶️ 1K Views — 120 Taka"
+};
+
+// 1K Dynamic Base Rate Configuration Mapping (For precise per-unit deduction)
+const serviceRates = {
+    'TG_Views': 1.0, 'TG_Reacts': 8.0, 'TG_Members': 15.0, 'TG_Combo': 10.0,
+    'FB_Views': 5.0, 'FB_Followers': 30.0, 'FB_Reacts': 15.0, 'fbreact_love': 15.0, 'fbreact_like': 15.0,
+    'IG_Views': 1.0, 'IG_Likes': 20.0, 'IG_Followers': 45.0,
+    'TT_Views': 3.0, 'TT_Likes': 10.0, 'TT_Followers': 150.0,
+    'YT_Views': 120.0, 'YT_Likes': 60.0, 'YT_Subs': 140.0
 };
 
 const mainKeyboard = Markup.keyboard([
@@ -102,7 +111,6 @@ bot.action(/view_(.+)/, (ctx) => {
         ]));
     }
 
-    // Process exact readable string for Service Name Tracking
     let serviceLabel = subCat.replace('_', ' ');
     let promptMsg = '';
     
@@ -124,18 +132,17 @@ bot.action(/view_(.+)/, (ctx) => {
         promptMsg = '❯ Enter Link:';
     }
 
-    // Save step tracking along with mapped service label
-    adminState[userId] = { step: 'waiting_order_link', serviceName: serviceLabel };
+    adminState[userId] = { step: 'waiting_order_link', serviceName: serviceLabel, serviceKey: subCat };
     ctx.reply(promptMsg);
 });
 
 // Facebook React Option Interceptors
 bot.action('fbreact_love', (ctx) => {
-    adminState[ctx.from.id] = { step: 'waiting_order_link', serviceName: 'FB Reacts (Love💖)' };
+    adminState[ctx.from.id] = { step: 'waiting_order_link', serviceName: 'FB Reacts (Love💖)', serviceKey: 'fbreact_love' };
     ctx.reply('❯ Enter Your Post Link');
 });
 bot.action('fbreact_like', (ctx) => {
-    adminState[ctx.from.id] = { step: 'waiting_order_link', serviceName: 'FB Reacts (Like👍)' };
+    adminState[ctx.from.id] = { step: 'waiting_order_link', serviceName: 'FB Reacts (Like👍)', serviceKey: 'fbreact_like' };
     ctx.reply('❯ Enter Your Post Link');
 });
 
@@ -162,7 +169,6 @@ bot.on('text', (ctx) => {
     const userId = ctx.from.id;
     const msg = ctx.message.text;
 
-    // Fixed: explicit command detection inside text interceptor to prevent loop freezing
     if (msg === '/admin') {
         if (!admins.includes(userId)) {
             return ctx.reply(`❌ Apni ei bot-er admin non!\n\n💡 আপনার ইউজার আইডি: ${userId}`);
@@ -175,7 +181,7 @@ bot.on('text', (ctx) => {
         ]));
     }
 
-    // Admin updates text state processing
+    // Admin state updates processing
     if (adminState[userId] && admins.includes(userId)) {
         if (adminState[userId].step === 'editing_bkash') {
             bkashNumber = msg;
@@ -211,33 +217,51 @@ bot.on('text', (ctx) => {
         }
     }
 
-    // Order Link step -> Proceed to ask Quantity (Preserving Service Name Context)
+    // Order Link step -> Proceed to ask Quantity
     if (adminState[userId] && adminState[userId].step === 'waiting_order_link') {
         adminState[userId] = { 
             step: 'waiting_order_quantity', 
             link: msg, 
-            serviceName: adminState[userId].serviceName || 'Unknown Service' 
+            serviceName: adminState[userId].serviceName || 'Unknown Service',
+            serviceKey: adminState[userId].serviceKey
         };
         return ctx.reply('❯ Enter Quantity (পরিমাণ লিখুন):');
     }
 
-    // Order Quantity step -> Generate Invoice Summary 
+    // Order Quantity step -> Process Balance verification and calculation logic
     if (adminState[userId] && adminState[userId].step === 'waiting_order_quantity') {
         const qty = parseInt(msg);
-        if (isNaN(qty) || qty <= 0) return ctx.reply('❌ সঠিক পরিমাণ সংখ্যায় লিখুন।');
+        if (isNaN(qty)) return ctx.reply('❌ সঠিক পরিমাণ সংখ্যায় লিখুন।');
         
-        // Random 6-digit Order ID generation
-        const generatedOrderId = Math.floor(100000 + Math.random() * 900000);
+        // Strict Constraint: Minimum Order Quantity 100
+        if (qty < 100) return ctx.reply('❌ Minimum quantity is 100! Please enter 100 or more.');
         
+        // Dynamic Price Logic calculation
+        const sKey = adminState[userId].serviceKey || 'TG_Views';
+        const base1kRate = serviceRates[sKey] || 5.0; // Defaults safely to 5 tk per 1k if missing
+        const structuralCost = (base1kRate * qty) / 1000;
+
+        // Initialize statistics record validation if missing
         if (!userStats[userId]) userStats[userId] = { balance: 2.00, orders: 0, spent: 0.00 };
+        
+        // Absolute Financial Guardrail Check
+        if (userStats[userId].balance < structuralCost) {
+            return ctx.reply(`❌ Order failed! Insufficient balance.\nRequired: ${structuralCost.toFixed(2)} Tk\nYour Balance: ${userStats[userId].balance.toFixed(2)} Tk`);
+        }
+
+        // Deduct balance and update system data variables securely
+        userStats[userId].balance -= structuralCost;
+        userStats[userId].spent += structuralCost;
         userStats[userId].orders += 1;
 
-        // Message to the User
+        const generatedOrderId = Math.floor(100000 + Math.random() * 900000);
+
+        // Success receipt to user 
         const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @nhautozone`;
         ctx.reply(orderSuccessMsg);
 
-        // Updated Group Payload Format with layout requested and Mapped Service tracking details
-        const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification\n${adminState[userId].serviceName}`;
+        // Verification routing to Admin Validation Group (-1003893464734)
+        const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification\n${adminState[userId].serviceName}\n💰 Cost: ${structuralCost.toFixed(2)} Tk`;
         
         bot.telegram.sendMessage(ADMIN_GROUP_ID, groupPayload, Markup.inlineKeyboard([
             [Markup.button.callback('✅ Confirm', `approve_${userId}_${generatedOrderId}`), Markup.button.callback('🚫 Cancel', `reject_${userId}_${generatedOrderId}`)]
@@ -262,31 +286,30 @@ bot.on('text', (ctx) => {
         return ctx.reply(summary);
     }
 
-    // Waiting for Transaction ID submission
+    // Waiting for Transaction ID submission -> Routed directly into Dedicated Admin Group with interactive actions
     if (adminState[userId] && adminState[userId].step === 'waiting_trx') {
         ctx.reply(`⚡ **আপনার ট্রানজেকশন আইডি (${msg}) সাবমিট হয়েছে!**\nএডমিন ভেরিফাই করে কিছুক্ষণের মধ্যে ব্যালেন্স যোগ করে দেবে।`);
         
-        // Broadcast to all authorized administrators
-        admins.forEach(adminId => {
-            bot.telegram.sendMessage(adminId, `🔔 **New Deposit Request!**\n\n👤 User: ${ctx.from.first_name} (${userId})\n💰 Amount: ${adminState[userId].amount}৳\n🧾 Order ID: ${adminState[userId].orderId}\n🔑 Trx ID: ${msg}`).catch(e => console.log(e.message));
-        });
+        const depositGroupPayload = `💵 **NEW INCOMING DEPOSIT REQUEST**\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n👤 **Name:** ${ctx.from.first_name}\n💰 **Amount:** ${adminState[userId].amount.toFixed(2)} ৳\n🧾 **Invoice ID:** \`${adminState[userId].orderId}\`\n🔑 **Trx ID:** \`${msg}\`\nStatus: ⏳ Waiting Admin Approval`;
+        
+        bot.telegram.sendMessage(ADMIN_GROUP_ID, depositGroupPayload, Markup.inlineKeyboard([
+            [Markup.button.callback('✅ Confirm Deposit', `dep_approve_${userId}_${adminState[userId].amount}`), Markup.button.callback('🚫 Cancel Deposit', `dep_reject_${userId}`)]
+        ])).catch(e => console.log("Deposit group routing error:", e.message));
         
         delete adminState[userId];
         return;
     }
 });
 
-// --- INTERCEPTOR FOR ADMINE VALIDATION GROUP ACTIONS ---
+// --- INTERCEPTOR FOR ADMIN VALIDATION GROUP ACTIONS ---
 bot.action(/approve_(.+)_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
     const orderId = ctx.match[2];
 
-    // Send absolute verification notification directly to customer inbox
     const customerReceipt = `🎉YOUR_ORDER_COMPLETE🎉\n\nORDER_ID: ${orderId}\n\nTHANKS FOR ORDER`;
     bot.telegram.sendMessage(targetUserId, customerReceipt).catch(e => console.log(e.message));
 
-    // Update group layout log context
-    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status 更新:** ✅ Approved / Completed by Admin.`);
+    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status:** ✅ Approved / Completed by Admin.`);
     ctx.answerCbQuery('Order successfully confirmed!', { show_alert: false });
 });
 
@@ -296,11 +319,34 @@ bot.action(/reject_(.+)_(.+)/, (ctx) => {
 
     bot.telegram.sendMessage(targetUserId, `❌ Your Order ID: ${orderId} has been cancelled by administrator.`).catch(e => console.log(e.message));
 
-    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status 更新:** 🚫 Cancelled by Admin.`);
+    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status:** 🚫 Cancelled by Admin.`);
     ctx.answerCbQuery('Order cancelled.', { show_alert: false });
 });
 
-// --- 6. ADMIN COMMAND BACKUP INITIALIZER ---
+// --- DEPOSIT CONFIRM / CANCEL BUTTON HANDLERS INSIDE ADMIN GROUP ---
+bot.action(/dep_approve_(.+)_(.+)/, (ctx) => {
+    const targetUserId = ctx.match[1];
+    const creditAmount = parseFloat(ctx.match[2]);
+
+    if (!userStats[targetUserId]) userStats[targetUserId] = { balance: 2.00, orders: 0, spent: 0.00 };
+    userStats[targetUserId].balance += creditAmount; // Safely add cash balance to account
+
+    bot.telegram.sendMessage(targetUserId, `💰 **আপনার ডিপোজিট সফল হয়েছে!**\n✅ ${creditAmount.toFixed(2)} টাকা আপনার ব্যালেন্সে যোগ করা হয়েছে।`).catch(e => console.log(e.message));
+
+    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Deposit Status:** 🟢 Verified & Confirmed by Admin.`);
+    ctx.answerCbQuery('Deposit balance credited successfully!', { show_alert: true });
+});
+
+bot.action(/dep_reject_(.+)/, (ctx) => {
+    const targetUserId = ctx.match[1];
+
+    bot.telegram.sendMessage(targetUserId, `❌ **আপনার ডিপোজিট রিকোয়েস্ট বাতিল করা হয়েছে!**\nদয়া করে সঠিক ট্রানজেকশন আইডি দিয়ে আবার চেষ্টা করুন বা সাপোর্টে যোগাযোগ করুন।`).catch(e => console.log(e.message));
+
+    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Deposit Status:** 🔴 Rejected / Invalid Trx by Admin.`);
+    ctx.answerCbQuery('Deposit request rejected.', { show_alert: false });
+});
+
+// --- 6. ADMIN COMMAND PANEL ---
 bot.command('admin', (ctx) => {
     const userId = ctx.from.id;
     if (!admins.includes(userId)) {
@@ -364,4 +410,3 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-         
