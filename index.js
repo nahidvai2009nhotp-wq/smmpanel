@@ -7,7 +7,7 @@ const bot = new Telegraf('8255693337:AAEOHh2xoiOwoR-K3ndLGtui8dmbGcgVlJ0');
 // Initial setup with your primary account as global supervisor
 let admins = [7488161246]; 
 let adminState = {};
-const ADMIN_GROUP_ID = -5180764577; // Your Dedicated Admin Verification Group ID
+const ADMIN_GROUP_ID = -1003893464734; // Your Updated Dedicated Admin Verification Group ID
 
 // --- DATABASE & SETTINGS ---
 let servicesDB = { 
@@ -229,7 +229,7 @@ bot.on('text', (ctx) => {
         const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @nhautozone`;
         ctx.reply(orderSuccessMsg);
 
-        // Advanced Validation Message to Dedicated Admin Verification Group (-5180764577)
+        // Advanced Validation Message to Dedicated Admin Verification Group (-1003893464734)
         const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification`;
         
         bot.telegram.sendMessage(ADMIN_GROUP_ID, groupPayload, Markup.inlineKeyboard([
@@ -357,3 +357,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
+                                                                                                         
