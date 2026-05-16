@@ -120,7 +120,20 @@ bot.on('text', (ctx) => {
     const userId = ctx.from.id;
     const msg = ctx.message.text;
 
-    // Fixed Admin Command Text Processing
+    // Fixed: explicit command detection inside text interceptor to prevent loop freezing
+    if (msg === '/admin') {
+        if (!admins.includes(userId)) {
+            return ctx.reply(`❌ Apni ei bot-er admin non!\n\n💡 আপনার ইউজার আইডি: ${userId}`);
+        }
+        return ctx.reply('🛠 **ADMIN CONTROL PANEL**', Markup.inlineKeyboard([
+            [Markup.button.callback('📱 Edit bKash Number', 'edit_bkash')],
+            [Markup.button.callback('📱 Edit Nagad Number', 'edit_nagad')],
+            [Markup.button.callback('➕ Add New Admin', 'add_admin_panel')],
+            [Markup.button.callback('🗑 Remove Admin', 'remove_admin_panel')]
+        ]));
+    }
+
+    // Admin updates text state processing
     if (adminState[userId] && admins.includes(userId)) {
         if (adminState[userId].step === 'editing_bkash') {
             bkashNumber = msg;
@@ -185,11 +198,11 @@ bot.on('text', (ctx) => {
     }
 });
 
-// --- 6. ADMIN CONTROL PANEL ---
+// --- 6. ADMIN COMMAND BACKUP INITIALIZER ---
 bot.command('admin', (ctx) => {
     const userId = ctx.from.id;
     if (!admins.includes(userId)) {
-        return ctx.reply(`❌ Apni ei bot-er admin non!\n\n💡 আপনার ইউজার আইডি: ${userId}\n(এডমিন প্যানেল এক্সেস করতে এই আইডিটি সেট থাকতে হবে)`);
+        return ctx.reply(`❌ Apni ei bot-er admin non!\n\n💡 আপনার ইউজার আইডি: ${userId}`);
     }
     ctx.reply('🛠 **ADMIN CONTROL PANEL**', Markup.inlineKeyboard([
         [Markup.button.callback('📱 Edit bKash Number', 'edit_bkash')],
@@ -240,4 +253,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-        
+    
