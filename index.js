@@ -61,12 +61,12 @@ bot.hears('Balance', (ctx) => {
     });
 });
 
-// --- 3. ORDER SECTION ---
+// --- 3. ORDER SECTION (Updated Keyboard Layout based on Photo) ---
 bot.hears('Order', (ctx) => {
     ctx.reply('🏠 **Select your service.**', Markup.inlineKeyboard([
         [Markup.button.callback('TikTok Services', 'cat_TikTok'), Markup.button.callback('Telegram Services', 'cat_Telegram')],
-        [Markup.button.callback('YouTube Services', 'cat_YouTube'), Markup.button.callback('Facebook Services', 'cat_Facebook')],
-        [Markup.button.callback('Instagram Services', 'cat_Instagram')],
+        [Markup.button.callback('YouTube Services', 'cat_YouTube'), Markup.button.callback('FaceBook Services', 'cat_Facebook')],
+        [Markup.button.callback('InstaGram Services', 'cat_Instagram'), Markup.button.callback('🌐 Premium service', 'premium_service')],
         [Markup.button.callback('↩️ Return', 'back_home')]
     ]));
 });
@@ -242,7 +242,16 @@ bot.action('go_deposit', (ctx) => {
 });
 
 bot.action('back_to_order', (ctx) => { 
-    ctx.editMessageText('🏠 **Select your service.**', Markup.inlineKeyboard([[Markup.button.callback('TikTok Services', 'cat_TikTok'), Markup.button.callback('Telegram Services', 'cat_Telegram')], [Markup.button.callback('YouTube Services', 'cat_YouTube'), Markup.button.callback('Facebook Services', 'cat_Facebook')], [Markup.button.callback('Instagram Services', 'cat_Instagram')], [Markup.button.callback('↩️ Return', 'back_home')]])); 
+    ctx.editMessageText('🏠 **Select your service.**', Markup.inlineKeyboard([
+        [Markup.button.callback('TikTok Services', 'cat_TikTok'), Markup.button.callback('Telegram Services', 'cat_Telegram')],
+        [Markup.button.callback('YouTube Services', 'cat_YouTube'), Markup.button.callback('FaceBook Services', 'cat_Facebook')],
+        [Markup.button.callback('InstaGram Services', 'cat_Instagram'), Markup.button.callback('🌐 Premium service', 'premium_service')],
+        [Markup.button.callback('↩️ Return', 'back_home')]
+    ])); 
+});
+
+bot.action('premium_service', (ctx) => {
+    ctx.answerCbQuery('Premium service ekhono available noy!', { show_alert: true });
 });
 
 bot.action('back_to_price', (ctx) => { 
@@ -253,4 +262,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-    
+         
