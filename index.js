@@ -90,6 +90,7 @@ bot.action(/cat_(.+)/, (ctx) => {
 
 // --- SERVICE ITEM CLICK HANDLERS (Custom UI Routing) ---
 bot.action(/view_(.+)/, (ctx) => {
+    const userId = ctx.from.id;
     const subCat = ctx.match[1];
     
     // Facebook React custom selection step
@@ -120,14 +121,17 @@ bot.action(/view_(.+)/, (ctx) => {
         promptMsg = '❯ Enter Link:';
     }
 
+    adminState[userId] = { step: 'waiting_order_link' };
     ctx.reply(promptMsg);
 });
 
 // Facebook React Option Interceptors
 bot.action('fbreact_love', (ctx) => {
+    adminState[ctx.from.id] = { step: 'waiting_order_link' };
     ctx.reply('❯ Enter Your Post Link');
 });
 bot.action('fbreact_like', (ctx) => {
+    adminState[ctx.from.id] = { step: 'waiting_order_link' };
     ctx.reply('❯ Enter Your Post Link');
 });
 
@@ -149,7 +153,7 @@ bot.action(/p_(.+)/, (ctx) => {
     });
 });
 
-// --- 5. TEXT INPUT HANDLER (Deposit & Admin Input System) ---
+// --- 5. TEXT INPUT HANDLER (Deposit & Admin & Order Processing) ---
 bot.on('text', (ctx) => {
     const userId = ctx.from.id;
     const msg = ctx.message.text;
@@ -201,6 +205,35 @@ bot.on('text', (ctx) => {
                 return ctx.reply('❌ এই আইডিটি এডমিন লিস্টে খুঁজে পাওয়া যায়নি।');
             }
         }
+    }
+
+    // Order Link step -> Proceed to ask Quantity
+    if (adminState[userId] && adminState[userId].step === 'waiting_order_link') {
+        adminState[userId] = { step: 'waiting_order_quantity', link: msg };
+        return ctx.reply('❯ Enter Quantity (পরিমাণ লিখুন):');
+    }
+
+    // Order Quantity step -> Generate Invoice Summary 
+    if (adminState[userId] && adminState[userId].step === 'waiting_order_quantity') {
+        const qty = parseInt(msg);
+        if (isNaN(qty) || qty <= 0) return ctx.reply('❌ সঠিক পরিমাণ সংখ্যায় লিখুন।');
+        
+        // Random Order ID generation
+        const generatedOrderId = Math.floor(10000000 + Math.random() * 90000000);
+        
+        // Update local stats context if user data exists
+        if (!userStats[userId]) userStats[userId] = { balance: 2.00, orders: 0, spent: 0.00 };
+        userStats[userId].orders += 1;
+
+        const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @RXSMMZONE`;
+        
+        // Send alert to admin log logs
+        admins.forEach(adminId => {
+            bot.telegram.sendMessage(adminId, `📦 **New Order Placed!**\n\n👤 User: ${ctx.from.first_name} (${userId})\n🆔 Order ID: ${generatedOrderId}\n🔗 Link: ${adminState[userId].link}\n📊 Qty: ${qty}`).catch(e => console.log(e.message));
+        });
+
+        delete adminState[userId];
+        return ctx.reply(orderSuccessMsg);
     }
 
     // User State Deposit Processing
@@ -296,4 +329,4 @@ bot.action('back_home', (ctx) => { ctx.deleteMessage(); ctx.reply('🏠 Main Men
 
 http.createServer((req, res) => { res.write('Bot Active'); res.end(); }).listen(process.env.PORT || 3000);
 bot.launch();
-                                                                                                           
+        
