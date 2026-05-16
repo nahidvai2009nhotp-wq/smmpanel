@@ -256,10 +256,11 @@ bot.on('text', (ctx) => {
         const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @nhautozone`;
         ctx.reply(orderSuccessMsg);
 
+        // Fixed inline payload structure mapping parameters via explicit data transfer to capture the cost parameter easily inside callback parsing
         const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification\n${adminState[userId].serviceName}\n💰 Cost: ${structuralCost.toFixed(2)} Tk`;
         
         bot.telegram.sendMessage(ADMIN_GROUP_ID, groupPayload, Markup.inlineKeyboard([
-            [Markup.button.callback('✅ Confirm', `approve_${userId}_${generatedOrderId}`), Markup.button.callback('🚫 Cancel', `reject_${userId}_${generatedOrderId}`)]
+            [Markup.button.callback('✅ Confirm', `approve_${userId}_${generatedOrderId}`), Markup.button.callback('🚫 Cancel', `reject_${userId}_${generatedOrderId}_cost_${structuralCost.toFixed(4)}`)]
         ])).catch(e => console.log("Group message delivery error:", e.message));
 
         delete adminState[userId];
@@ -288,7 +289,6 @@ bot.on('text', (ctx) => {
         const safeAmount = parseFloat(adminState[userId].amount).toFixed(2);
         const depositGroupPayload = `💵 **NEW INCOMING DEPOSIT REQUEST**\n━━━━━━━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n👤 **Name:** ${ctx.from.first_name}\n💰 **Amount:** ${safeAmount} ৳\n🧾 **Invoice ID:** \`${adminState[userId].orderId}\`\n🔑 **Trx ID:** \`${msg}\`\nStatus: ⏳ Waiting Admin Approval`;
         
-        // Dynamic callback string optimization to prevent custom regex splitting mismatch inside telegraf handlers
         bot.telegram.sendMessage(ADMIN_GROUP_ID, depositGroupPayload, Markup.inlineKeyboard([
             [Markup.button.callback('✅ Confirm Deposit', `dpok_${userId}_${safeAmount}`), Markup.button.callback('🚫 Cancel Deposit', `dpno_${userId}`)]
         ])).catch(e => console.log("Deposit group routing error:", e.message));
@@ -310,24 +310,35 @@ bot.action(/approve_(.+)_(.+)/, (ctx) => {
     ctx.answerCbQuery('Order successfully confirmed!', { show_alert: false });
 });
 
-bot.action(/reject_(.+)_(.+)/, (ctx) => {
+// Fixed Order Cancellation: Extract precise structural dynamic cost logic parameters to roll back user account instantly
+bot.action(/reject_(.+)_(.+)_cost_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
     const orderId = ctx.match[2];
+    const refundAmount = parseFloat(ctx.match[3] || 0);
 
-    bot.telegram.sendMessage(targetUserId, `❌ Your Order ID: ${orderId} has been cancelled by administrator.`).catch(e => console.log(e.message));
+    if (!userStats[targetUserId]) userStats[targetUserId] = { balance: 2.00, orders: 0, spent: 0.00 };
+    
+    // Reverse balance deduction logic updates
+    let oldBalance = parseFloat(userStats[targetUserId].balance || 0);
+    let oldSpent = parseFloat(userStats[targetUserId].spent || 0);
+    
+    userStats[targetUserId].balance = parseFloat((oldBalance + refundAmount).toFixed(4));
+    userStats[targetUserId].spent = parseFloat(Math.max(0, oldSpent - refundAmount).toFixed(4));
+    if (userStats[targetUserId].orders > 0) userStats[targetUserId].orders -= 1;
 
-    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status:** 🚫 Cancelled by Admin.`);
-    ctx.answerCbQuery('Order cancelled.', { show_alert: false });
+    bot.telegram.sendMessage(targetUserId, `❌ Your Order ID: ${orderId} has been cancelled by administrator.\n💰 ${refundAmount.toFixed(2)} Tk has been refunded back to your account balance!`).catch(e => console.log(e.message));
+
+    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status:** 🚫 Cancelled & Balance Refunded by Admin.`);
+    ctx.answerCbQuery(`Order cancelled. ${refundAmount.toFixed(2)} Tk refunded!`, { show_alert: true });
 });
 
-// --- FIXED & OPTIMIZED DEPOSIT SYSTEM ACTION ACTION INTERCEPTORS ---
+// --- DEPOSIT SYSTEM ACTION INTERCEPTORS ---
 bot.action(/dpok_(.+)_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
     const creditAmount = parseFloat(ctx.match[2] || 0);
 
     if (!userStats[targetUserId]) userStats[targetUserId] = { balance: 2.00, orders: 0, spent: 0.00 };
     
-    // Fixed: Guaranteed atomic variable execution for instant memory map value addition
     let currentBalance = parseFloat(userStats[targetUserId].balance || 0);
     userStats[targetUserId].balance = parseFloat((currentBalance + creditAmount).toFixed(4));
 
