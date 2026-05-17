@@ -228,7 +228,7 @@ bot.on('text', (ctx) => {
         }
         return ctx.reply('🛠 **ADVANCED ADMINISTRATIVE OPERATIONAL PANEL**', Markup.inlineKeyboard([
             [Markup.button.callback('➕ Add Admin', 'add_admin_panel'), Markup.button.callback('🗑 Remove Admin', 'remove_admin_panel')],
-            [Markup.button.callback('🔍 View User Profile', 'view_user_panel'), Markup.button.callback('📢 Broadcast Message', 'broadcast_panel')],
+            [Markup.button.callback('🔍 View All Users List', 'view_user_panel'), Markup.button.callback('📢 Broadcast Message', 'broadcast_panel')],
             [Markup.button.callback('📦 Add New Service', 'add_service_panel'), Markup.button.callback('❌ Remove Service', 'remove_service_panel')],
             [Markup.button.callback('⚙️ Service View/Like Button Set', 'srv_buttons_panel')],
             [Markup.button.callback('💰 Upgrade Service Price', 'price_upgrade_panel')],
@@ -273,16 +273,6 @@ bot.on('text', (ctx) => {
             }
         }
         // ADVANCED STATE INTERCEPTORS
-        if (state === 'viewing_user') {
-            const targetId = parseInt(msg);
-            if (isNaN(targetId)) return ctx.reply('❌ সঠিক Numerical Telegram User ID প্রদান করুন।');
-            if (!userStats[targetId]) {
-                return ctx.reply('❌ এই ইউজারটি বটের ডাটাবেজে এখনো রেজিস্টার্ড বা একটিভ নয়।');
-            }
-            const profile = userStats[targetId];
-            delete adminState[userId];
-            return ctx.reply(`👤 **USER RECORDS DATA FOUND:**\n━━━━━━━━━━━━━━━━━━━━\n🆔 **User ID:** \`${targetId}\`\n📛 **Username:** @${profile.username || 'N/A'}\n💰 **Current Balance:** ${parseFloat(profile.balance || 0).toFixed(2)} Taka\n📦 **Total Orders:** ${profile.orders || 0}\n💵 **Total Spent:** ${parseFloat(profile.spent || 0).toFixed(2)} Taka\n━━━━━━━━━━━━━━━━━━━━`);
-        }
         if (state === 'broadcasting') {
             delete adminState[userId];
             ctx.reply(`📢 Broadcast executing across operational cache pools...`);
@@ -459,16 +449,35 @@ bot.action('remove_admin_panel', (ctx) => {
     ctx.reply('🗑 যে এডমিন আইডিটি রিমুভ করতে চান তা লিখে পাঠান:');
 });
 
+// UPDATED: Now directly pulls all active registry objects without step context prompts
 bot.action('view_user_panel', (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
-    adminState[ctx.from.id] = { step: 'viewing_user' };
-    ctx.reply('🔍 যে ইউজারের প্রোফাইল দেখতে চান তার Telegram User ID টি লিখে পাঠান:');
+    
+    const userKeys = Object.keys(userStats);
+    const totalUsersCount = userKeys.length;
+    
+    if (totalUsersCount === 0) {
+        return ctx.reply('📋 **USER REPOSITORY REGISTRY:**\n━━━━━━━━━━━━━━━━━━━━\n현재 বটের ডাটাবেজে কোনো ইউজার ডাটা রেকর্ড পাওয়া যায়নি।\n━━━━━━━━━━━━━━━━━━━━');
+    }
+    
+    let profileReport = `👥 **TOTAL REGISTERED USERS:** ${totalUsersCount}\n━━━━━━━━━━━━━━━━━━━━\n`;
+    
+    userKeys.forEach((targetId, index) => {
+        const uData = userStats[targetId];
+        const currentUsr = uData.username && uData.username !== 'N/A' ? `@${uData.username}` : 'No Username';
+        const currentBal = parseFloat(uData.balance || 0).toFixed(2);
+        
+        profileReport += `${index + 1}. 🆔 \`${targetId}\` | 👤 ${currentUsr} | 💰 **${currentBal} Tk**\n`;
+    });
+    
+    profileReport += `━━━━━━━━━━━━━━━━━━━━`;
+    return ctx.reply(profileReport, { parse_mode: 'Markdown' });
 });
 
 bot.action('broadcast_panel', (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
     adminState[ctx.from.id] = { step: 'broadcasting' };
-    ctx.reply('📢 বটের সকল ইউজারদের কাছে পাঠানোর জন্য আপনার নোтить/মেসেজটি লিখুন:');
+    ctx.reply('📢 বটের সকল ইউজারদের কাছে পাঠানোর জন্য আপনার নোটিশ/মেসেজটি লিখুন:');
 });
 
 bot.action('add_service_panel', (ctx) => {
