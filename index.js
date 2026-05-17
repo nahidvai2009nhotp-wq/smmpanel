@@ -294,13 +294,7 @@ bot.on('text', (ctx) => {
             return ctx.reply(`✅ Layout state flags parsed and saved successfully for view/like options interface!`);
         }
         
-        // Price Upgrade Step 1: Target Service Key Received
-        if (state === 'waiting_upgrade_service_name') {
-            adminState[userId] = { step: 'upgrading_prices', serviceTarget: msg };
-            return ctx.reply(`💰 আপনি **${msg}**-এর প্রাইস সিলেক্ট করেছেন।\n\nএখন এই সার্ভিসের নতুন আপগ্রেডেড প্রাইস রেট লিস্ট টেক্সট বা রেট ভ্যালু ইনপুট দিন:`);
-        }
-        
-        // Price Upgrade Step 2: Custom Text/Value Payload Received
+        // Price Upgrade Handler Loop
         if (state === 'upgrading_prices') {
             const targetedService = adminState[userId].serviceTarget || 'Unknown';
             delete adminState[userId];
@@ -505,11 +499,58 @@ bot.action('srv_buttons_panel', (ctx) => {
     ctx.reply('⚙️ সার্ভিসের লাইক/ভিউ বাটন রিলেশন টাইপ কনফিগার করুন:');
 });
 
-// UPDATED: Now sets step to prompt for the target service name first
+// --- UPDATED DYNAMIC PRICE UPGRADE INTERFACE BUTTON ROUTINGS ---
 bot.action('price_upgrade_panel', (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
-    adminState[ctx.from.id] = { step: 'waiting_upgrade_service_name' };
-    ctx.reply('💰 আপনি কোন সার্ভিসের প্রাইস আপগ্রেড করতে চান? সার্ভিসের কি-ওয়ার্ড বা নাম লিখে পাঠান:\n\n(যেমন: TG_Views, FB_Followers, TT_Likes)');
+    ctx.editMessageText('💰 **Select Platform Category for Price Upgrade:**', Markup.inlineKeyboard([
+        [Markup.button.callback('Telegram Services', 'upgcat_Telegram'), Markup.button.callback('Facebook Services', 'upgcat_Facebook')],
+        [Markup.button.callback('Instagram Services', 'upgcat_Instagram'), Markup.button.callback('TikTok Services', 'upgcat_TikTok')],
+        [Markup.button.callback('YouTube Services', 'upgcat_YouTube')]
+    ]));
+});
+
+// Dynamic Cat Action Loops mapping options automatically
+bot.action(/upgcat_(.+)/, (ctx) => {
+    if (!admins.includes(ctx.from.id)) return;
+    const platform = ctx.match[1];
+    let subButtons = [];
+
+    if (platform === 'Telegram') {
+        subButtons = [
+            [Markup.button.callback('Members 👥', 'upgitem_TG_Members'), Markup.button.callback('Views 👁️', 'upgitem_TG_Views')],
+            [Markup.button.callback('Reactions 😍', 'upgitem_TG_Reacts'), Markup.button.callback('Combo Pack 🎁', 'upgitem_TG_Combo')]
+        ];
+    } else if (platform === 'Facebook') {
+        subButtons = [
+            [Markup.button.callback('Reacts ❤️', 'upgitem_FB_Reacts'), Markup.button.callback('Followers 👥', 'upgitem_FB_Followers')],
+            [Markup.button.callback('Views 📈', 'upgitem_FB_Views')]
+        ];
+    } else if (platform === 'Instagram') {
+        subButtons = [
+            [Markup.button.callback('Likes ❤️', 'upgitem_IG_Likes'), Markup.button.callback('Followers 👥', 'upgitem_IG_Followers')],
+            [Markup.button.callback('Views 👁️', 'upgitem_IG_Views')]
+        ];
+    } else if (platform === 'TikTok') {
+        subButtons = [
+            [Markup.button.callback('Views 📈', 'upgitem_TT_Views'), Markup.button.callback('Likes ❤️', 'upgitem_TT_Likes')],
+            [Markup.button.callback('Followers 👥', 'upgitem_TT_Followers')]
+        ];
+    } else if (platform === 'YouTube') {
+        subButtons = [
+            [Markup.button.callback('Views 📈', 'upgitem_YT_Views'), Markup.button.callback('Likes 👍', 'upgitem_YT_Likes')],
+            [Markup.button.callback('Subscribers 👥', 'upgitem_YT_Subs')]
+        ];
+    }
+
+    subButtons.push([Markup.button.callback('↩️ Back to Category', 'price_upgrade_panel')]);
+    ctx.editMessageText(`🛠️ **Select Specific [${platform}] Item to Change Rate:**`, Markup.inlineKeyboard(subButtons));
+});
+
+bot.action(/upgitem_(.+)/, (ctx) => {
+    if (!admins.includes(ctx.from.id)) return;
+    const serviceKey = ctx.match[1];
+    adminState[ctx.from.id] = { step: 'upgrading_prices', serviceTarget: serviceKey };
+    ctx.reply(`💰 আপনি **${serviceKey}**-এর প্রাইস সিলেক্ট করেছেন।\n\nএখন এই সার্ভিসের নতুন আপগ্রেডেড প্রাইস রেট লিস্ট টেক্সট বা রেট ভ্যালু ইনপুট দিন:`);
 });
 
 bot.action('edit_bkash', (ctx) => {
