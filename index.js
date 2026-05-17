@@ -41,6 +41,43 @@ let serviceRates = {
     'YT_Views': 120.0, 'YT_Likes': 60.0, 'YT_Subs': 140.0
 };
 
+// Helper function to keep priceInfo auto synchronized when rates change
+function syncPriceAndInfo(serviceKey, newPrice) {
+    if (serviceKey === 'TG_Views') {
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
+    } else if (serviceKey === 'TG_Reacts') {
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${newPrice} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
+    } else if (serviceKey === 'TG_Members') {
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${newPrice} Taka`;
+    } else if (serviceKey === 'FB_Views') {
+        priceInfo['Facebook'] = `🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — ${newPrice} Tk\n👤 1K Followers — ${serviceRates['FB_Followers']} Taka\n😍 1K Reactions — ${serviceRates['FB_Reacts']} TK`;
+    } else if (serviceKey === 'FB_Followers') {
+        priceInfo['Facebook'] = `🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — ${serviceRates['FB_Views']} Tk\n👤 1K Followers — ${newPrice} Taka\n😍 1K Reactions — ${serviceRates['FB_Reacts']} TK`;
+    } else if (serviceKey === 'FB_Reacts') {
+        priceInfo['Facebook'] = `🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — ${serviceRates['FB_Views']} Tk\n👤 1K Followers — ${serviceRates['FB_Followers']} Taka\n😍 1K Reactions — ${newPrice} TK`;
+        serviceRates['fbreact_love'] = parseFloat(newPrice);
+        serviceRates['fbreact_like'] = parseFloat(newPrice);
+    } else if (serviceKey === 'IG_Views') {
+        priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Likes — ${serviceRates['IG_Likes']} Taka\n⭐ 1K Followers — ${serviceRates['IG_Followers']} Taka`;
+    } else if (serviceKey === 'IG_Likes') {
+        priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${serviceRates['IG_Views']} Taka\n❤️ 1K Likes — ${newPrice} Taka\n⭐ 1K Followers — ${serviceRates['IG_Followers']} Taka`;
+    } else if (serviceKey === 'IG_Followers') {
+        priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${serviceRates['IG_Views']} Taka\n❤️ 1K Likes — ${serviceRates['IG_Likes']} Taka\n⭐ 1K Followers — ${newPrice} Taka`;
+    } else if (serviceKey === 'TT_Views') {
+        priceInfo['TikTok'] = `⚫ 𝗧𝗜𝗞𝗧𝗢𝗞\n\n👁️ 1K Views — ${newPrice} Taka\n👍 1K Likes — ${serviceRates['TT_Likes']} Taka\n⭐ 1K Followers — ${serviceRates['TT_Followers']} Tk`;
+    } else if (serviceKey === 'TT_Likes') {
+        priceInfo['TikTok'] = `⚫ 𝗧𝗜𝗞𝗧𝗢𝗞\n\n👁️ 1K Views — ${serviceRates['TT_Views']} Taka\n👍 1K Likes — ${newPrice} Taka\n⭐ 1K Followers — ${serviceRates['TT_Followers']} Tk`;
+    } else if (serviceKey === 'TT_Followers') {
+        priceInfo['TikTok'] = `⚫ 𝗧𝗜𝗞𝗧𝗢𝗞\n\n👁️ 1K Views — ${serviceRates['TT_Views']} Taka\n👍 1K Likes — ${serviceRates['TT_Likes']} Taka\n⭐ 1K Followers — ${newPrice} Tk`;
+    } else if (serviceKey === 'YT_Views') {
+        priceInfo['YouTube'] = `🔴 𝗬𝗢𝗨𝗧𝗨𝗕𝗘\n\n👍 1K Likes — ${serviceRates['YT_Likes']} Taka\n🔔 1K Subscribers — ${serviceRates['YT_Subs']} Tk\n▶️ 1K Views — ${newPrice} Taka`;
+    } else if (serviceKey === 'YT_Likes') {
+        priceInfo['YouTube'] = `🔴 𝗬𝗢𝗨𝗧𝗨𝗕𝗘\n\n👍 1K Likes — ${newPrice} Taka\n🔔 1K Subscribers — ${serviceRates['YT_Subs']} Tk\n▶️ 1K Views — ${serviceRates['YT_Views']} Taka`;
+    } else if (serviceKey === 'YT_Subs') {
+        priceInfo['YouTube'] = `🔴 𝗬𝗢𝗨𝗧𝗨𝗕𝗘\n\n👍 1K Likes — ${serviceRates['YT_Likes']} Taka\n🔔 1K Subscribers — ${newPrice} Tk\n▶️ 1K Views — ${serviceRates['YT_Views']} Taka`;
+    }
+}
+
 // --- CORE SYSTEM DASHBOARD KEYBOARD LAYOUTS ---
 const mainKeyboard = Markup.keyboard([
     ['Order'],
@@ -294,19 +331,23 @@ bot.on('text', (ctx) => {
             return ctx.reply(`✅ Layout state flags parsed and saved successfully for view/like options interface!`);
         }
         
-        // Price Upgrade Handler Loop -> Dynamic memory update calculation injection
+        // Price Upgrade Handler Loop UPDATED: Processes actual numerical changes and auto synchronizes priceInfo text parameters
         if (state === 'upgrading_prices') {
             const targetedService = adminState[userId].serviceTarget || 'Unknown';
-            const newPriceValue = parseFloat(msg);
-
-            if (isNaN(newPriceValue)) {
-                return ctx.reply('❌ দয়া করে একটি সঠিক সংখ্যা (Number) ইনপুট দিন।');
+            const parsedRate = parseFloat(msg);
+            
+            if (isNaN(parsedRate)) {
+                return ctx.reply('❌ ভুল ইনপুট! দয়া করে শুধুমাত্র নতুন মূল্য সংখ্যায় লিখুন (যেমন: 100)।');
             }
-
-            // Realtime injection structure update
-            serviceRates[targetedService] = newPriceValue;
+            
+            // Core Database Mapping Rate Update
+            serviceRates[targetedService] = parsedRate;
+            
+            // Execute real-time interface sync logic
+            syncPriceAndInfo(targetedService, parsedRate);
+            
             delete adminState[userId];
-            return ctx.reply(`✅ Service [${targetedService}] price successfully upgraded to: **${newPriceValue} Tk** per 1K!`);
+            return ctx.reply(`✅ Successfully Changed Rate!\n📊 Service: **${targetedService}**\n💰 New 1K Price: **${parsedRate} Tk**\n\n📢 "Price & Info" board configuration synchronized successfully!`);
         }
     }
 
@@ -507,7 +548,6 @@ bot.action('srv_buttons_panel', (ctx) => {
     ctx.reply('⚙️ সার্ভিসের লাইক/ভিউ বাটন রিলেশন টাইপ কনফিগার করুন:');
 });
 
-// --- DYNAMIC PRICE UPGRADE INTERFACE BUTTON ROUTINGS ---
 bot.action('price_upgrade_panel', (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
     ctx.editMessageText('💰 **Select Platform Category for Price Upgrade:**', Markup.inlineKeyboard([
@@ -558,7 +598,7 @@ bot.action(/upgitem_(.+)/, (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
     const serviceKey = ctx.match[1];
     adminState[ctx.from.id] = { step: 'upgrading_prices', serviceTarget: serviceKey };
-    ctx.reply(`💰 আপনি **${serviceKey}**-এর প্রাইস সিলেক্ট করেছেন।\n\nএখন এই সার্ভিসের নতুন আপগ্রেডেড প্রাইস রেট লিস্ট টেক্সট বা রেট ভ্যালু ইনপুট দিন:`);
+    ctx.reply(`💰 আপনি **${serviceKey}**-এর প্রাইস সিলেক্ট করেছেন।\n\nএখন এই সার্ভিসের প্রতি ১০০০ (1K) এর নতুন দাম শুধুমাত্র সংখ্যায় লিখে পাঠান (যেমন: 100):`);
 });
 
 bot.action('edit_bkash', (ctx) => {
