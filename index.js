@@ -33,7 +33,7 @@ let priceInfo = {
 };
 
 // 1K Dynamic Base Rate Configuration Mapping (For precise per-unit deduction)
-const serviceRates = {
+let serviceRates = {
     'TG_Views': 1.0, 'TG_Reacts': 8.0, 'TG_Members': 15.0, 'TG_Combo': 10.0,
     'FB_Views': 5.0, 'FB_Followers': 30.0, 'FB_Reacts': 15.0, 'fbreact_love': 15.0, 'fbreact_like': 15.0,
     'IG_Views': 1.0, 'IG_Likes': 20.0, 'IG_Followers': 45.0,
@@ -294,11 +294,19 @@ bot.on('text', (ctx) => {
             return ctx.reply(`✅ Layout state flags parsed and saved successfully for view/like options interface!`);
         }
         
-        // Price Upgrade Handler Loop
+        // Price Upgrade Handler Loop -> Dynamic memory update calculation injection
         if (state === 'upgrading_prices') {
             const targetedService = adminState[userId].serviceTarget || 'Unknown';
+            const newPriceValue = parseFloat(msg);
+
+            if (isNaN(newPriceValue)) {
+                return ctx.reply('❌ দয়া করে একটি সঠিক সংখ্যা (Number) ইনপুট দিন।');
+            }
+
+            // Realtime injection structure update
+            serviceRates[targetedService] = newPriceValue;
             delete adminState[userId];
-            return ctx.reply(`✅ Global Service Rates adjustments configurations saved successfully for [${targetedService}]!`);
+            return ctx.reply(`✅ Service [${targetedService}] price successfully upgraded to: **${newPriceValue} Tk** per 1K!`);
         }
     }
 
@@ -499,7 +507,7 @@ bot.action('srv_buttons_panel', (ctx) => {
     ctx.reply('⚙️ সার্ভিসের লাইক/ভিউ বাটন রিলেশন টাইপ কনফিগার করুন:');
 });
 
-// --- UPDATED DYNAMIC PRICE UPGRADE INTERFACE BUTTON ROUTINGS ---
+// --- DYNAMIC PRICE UPGRADE INTERFACE BUTTON ROUTINGS ---
 bot.action('price_upgrade_panel', (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
     ctx.editMessageText('💰 **Select Platform Category for Price Upgrade:**', Markup.inlineKeyboard([
