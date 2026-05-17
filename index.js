@@ -228,7 +228,7 @@ bot.on('text', (ctx) => {
         }
         return ctx.reply('🛠 **ADVANCED ADMINISTRATIVE OPERATIONAL PANEL**', Markup.inlineKeyboard([
             [Markup.button.callback('➕ Add Admin', 'add_admin_panel'), Markup.button.callback('🗑 Remove Admin', 'remove_admin_panel')],
-            [Markup.button.callback('🔍 View All Users List', 'view_user_panel'), Markup.button.callback('📢 Broadcast Message', 'broadcast_panel')],
+            [Markup.button.callback('🔍 View User Profile', 'view_user_panel'), Markup.button.callback('📢 Broadcast Message', 'broadcast_panel')],
             [Markup.button.callback('📦 Add New Service', 'add_service_panel'), Markup.button.callback('❌ Remove Service', 'remove_service_panel')],
             [Markup.button.callback('⚙️ Service View/Like Button Set', 'srv_buttons_panel')],
             [Markup.button.callback('💰 Upgrade Service Price', 'price_upgrade_panel')],
@@ -272,7 +272,6 @@ bot.on('text', (ctx) => {
                 return ctx.reply('❌ এই আইডিটি এডমিন লিস্টে খুঁজে পাওয়া যায়নি।');
             }
         }
-        // ADVANCED STATE INTERCEPTORS
         if (state === 'broadcasting') {
             delete adminState[userId];
             ctx.reply(`📢 Broadcast executing across operational cache pools...`);
@@ -294,9 +293,18 @@ bot.on('text', (ctx) => {
             delete adminState[userId];
             return ctx.reply(`✅ Layout state flags parsed and saved successfully for view/like options interface!`);
         }
+        
+        // Price Upgrade Step 1: Target Service Key Received
+        if (state === 'waiting_upgrade_service_name') {
+            adminState[userId] = { step: 'upgrading_prices', serviceTarget: msg };
+            return ctx.reply(`💰 আপনি **${msg}**-এর প্রাইস সিলেক্ট করেছেন।\n\nএখন এই সার্ভিসের নতুন আপগ্রেডেড প্রাইস রেট লিস্ট টেক্সট বা রেট ভ্যালু ইনপুট দিন:`);
+        }
+        
+        // Price Upgrade Step 2: Custom Text/Value Payload Received
         if (state === 'upgrading_prices') {
+            const targetedService = adminState[userId].serviceTarget || 'Unknown';
             delete adminState[userId];
-            return ctx.reply(`✅ Global Service Rates adjustments configurations saved successfully!`);
+            return ctx.reply(`✅ Global Service Rates adjustments configurations saved successfully for [${targetedService}]!`);
         }
     }
 
@@ -449,7 +457,6 @@ bot.action('remove_admin_panel', (ctx) => {
     ctx.reply('🗑 যে এডমিন আইডিটি রিমুভ করতে চান তা লিখে পাঠান:');
 });
 
-// UPDATED: Now directly pulls all active registry objects without step context prompts
 bot.action('view_user_panel', (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
     
@@ -498,10 +505,11 @@ bot.action('srv_buttons_panel', (ctx) => {
     ctx.reply('⚙️ সার্ভিসের লাইক/ভিউ বাটন রিলেশন টাইপ কনফিগার করুন:');
 });
 
+// UPDATED: Now sets step to prompt for the target service name first
 bot.action('price_upgrade_panel', (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
-    adminState[ctx.from.id] = { step: 'upgrading_prices' };
-    ctx.reply('💰 নতুন আপগ্রেডেড প্রাইস রেট লিস্ট টেক্সট ইনপুট দিন:');
+    adminState[ctx.from.id] = { step: 'waiting_upgrade_service_name' };
+    ctx.reply('💰 আপনি কোন সার্ভিসের প্রাইস আপগ্রেড করতে চান? সার্ভিসের কি-ওয়ার্ড বা নাম লিখে পাঠান:\n\n(যেমন: TG_Views, FB_Followers, TT_Likes)');
 });
 
 bot.action('edit_bkash', (ctx) => {
