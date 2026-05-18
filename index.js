@@ -45,11 +45,11 @@ let serviceRates = {
 // Helper function to keep priceInfo auto synchronized when rates change
 function syncPriceAndInfo(serviceKey, newPrice) {
     if (serviceKey === 'TG_Views') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
     } else if (serviceKey === 'TG_Reacts') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${newPrice} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${newPrice} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
     } else if (serviceKey === 'TG_Members') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${newPrice} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${newPrice} Taka`;
     } else if (serviceKey === 'FB_Views') {
         priceInfo['Facebook'] = `🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — ${newPrice} Tk\n👤 1K Followers — ${serviceRates['FB_Followers']} Taka\n😍 1K Reactions — ${serviceRates['FB_Reacts']} TK`;
     } else if (serviceKey === 'FB_Followers') {
@@ -61,7 +61,7 @@ function syncPriceAndInfo(serviceKey, newPrice) {
     } else if (serviceKey === 'IG_Views') {
         priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Likes — ${serviceRates['IG_Likes']} Taka\n⭐ 1K Followers — ${serviceRates['IG_Followers']} Taka`;
     } else if (serviceKey === 'IG_Likes') {
-        priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['IG_Views']} Taka\n❤️ 1K Likes — ${newPrice} Taka\n⭐ 1K Followers — ${serviceRates['IG_Followers']} Taka`;
+        priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${serviceRates['IG_Views']} Taka\n❤️ 1K Likes — ${newPrice} Taka\n⭐ 1K Followers — ${serviceRates['IG_Followers']} Taka`;
     } else if (serviceKey === 'IG_Followers') {
         priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${serviceRates['IG_Views']} Taka\n❤️ 1K Likes — ${serviceRates['IG_Likes']} Taka\n⭐ 1K Followers — ${newPrice} Taka`;
     } else if (serviceKey === 'TT_Views') {
@@ -251,6 +251,12 @@ bot.action(/p_(.+)/, (ctx) => {
     });
 });
 
+// --- UPDATED: SUPPORT TEXT HANDLER ---
+bot.hears('Support', (ctx) => {
+    const supportMsg = `━━━━━━━━━━━━━━━━━━\n🔒 NH AUTO BOOST 𝗦𝗨𝗣𝗣𝗢𝗥𝗧\n━━━━━━━━━━━━━━━━━━\n📌 বট থেকে অর্ডার করার সম্পূর্ণ নিয়ম:\n🔗 /Admin teke link add korte parbo\n\n📌 বটে টাকা অ্যাড করার সম্পূর্ণ নিয়ম:\n🔗 /Admin teke link add korte parbo\n\n‼️ ভুল বা প্রাইভেট লিংক অর্ডার করবেন না।\n━━━━━━━━━━━━━━━━━━━━━━━\n🕒 ২৪/৭ সাপোর্টের জন্য\n━━━━━━━━━━━━━━━━━━━━━`;
+    ctx.reply(supportMsg);
+});
+
 // --- 5. TEXT INPUT HANDLER (CLIENTS & ADMINS CODES) ---
 bot.on('text', (ctx) => {
     const userId = ctx.from.id;
@@ -434,7 +440,6 @@ bot.on('text', (ctx) => {
 });
 
 // --- INTERCEPTOR FOR ADMIN VALIDATION GROUP ACTIONS ---
-// UPDATED: Now triggers targeted group completion log notification on approve callback click
 bot.action(/approve_(.+)_(.+)_(.+)_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
     const orderId = ctx.match[2];
