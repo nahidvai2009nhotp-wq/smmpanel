@@ -25,6 +25,10 @@ let userStats = {};
 let bkashNumber = "01897846165";
 let nagadNumber = "0101001010";
 
+// Admin adjustable Support Link configurations
+let supportOrderLink = "/Admin teke link add korte parbo";
+let supportDepositLink = "/Admin teke link add korte parbo";
+
 let priceInfo = {
     'Telegram': "🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — 1 Taka\n❤️ 1K Reacts — 8 Taka\n👥 1K Members — 15 Taka",
     'Facebook': "🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — 5 Tk\n👤 1K Followers — 30 Taka\n😍 1K Reactions — 15 TK",
@@ -45,11 +49,11 @@ let serviceRates = {
 // Helper function to keep priceInfo auto synchronized when rates change
 function syncPriceAndInfo(serviceKey, newPrice) {
     if (serviceKey === 'TG_Views') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
     } else if (serviceKey === 'TG_Reacts') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${newPrice} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${newPrice} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
     } else if (serviceKey === 'TG_Members') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${newPrice} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${newPrice} Taka`;
     } else if (serviceKey === 'FB_Views') {
         priceInfo['Facebook'] = `🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — ${newPrice} Tk\n👤 1K Followers — ${serviceRates['FB_Followers']} Taka\n😍 1K Reactions — ${serviceRates['FB_Reacts']} TK`;
     } else if (serviceKey === 'FB_Followers') {
@@ -251,9 +255,9 @@ bot.action(/p_(.+)/, (ctx) => {
     });
 });
 
-// --- UPDATED: SUPPORT TEXT HANDLER ---
+// --- SUPPORT TEXT HANDLER (UPDATED TO DISPLAY DYNAMIC LINKS) ---
 bot.hears('Support', (ctx) => {
-    const supportMsg = `━━━━━━━━━━━━━━━━━━\n🔒 NH AUTO BOOST 𝗦𝗨𝗣𝗣𝗢𝗥𝗧\n━━━━━━━━━━━━━━━━━━\n📌 বট থেকে অর্ডার করার সম্পূর্ণ নিয়ম:\n🔗 /Admin teke link add korte parbo\n\n📌 বটে টাকা অ্যাড করার সম্পূর্ণ নিয়ম:\n🔗 /Admin teke link add korte parbo\n\n‼️ ভুল বা প্রাইভেট লিংক অর্ডার করবেন না।\n━━━━━━━━━━━━━━━━━━━━━━━\n🕒 ২৪/৭ সাপোর্টের জন্য\n━━━━━━━━━━━━━━━━━━━━━`;
+    const supportMsg = `━━━━━━━━━━━━━━━━━━\n🔒 NH AUTO BOOST 𝗦𝗨𝗣𝗣𝗢𝗥𝗧\n━━━━━━━━━━━━━━━━━━\n📌 বট থেকে অর্ডার করার সম্পূর্ণ নিয়ম:\n🔗 ${supportOrderLink}\n\n📌 বটে টাকা অ্যাড করার সম্পূর্ণ নিয়ম:\n🔗 ${supportDepositLink}\n\n‼️ ভুল বা প্রাইভেট লিংক অর্ডার করবেন না।\n━━━━━━━━━━━━━━━━━━━━━━━\n🕒 ২৪/৭ সাপোর্টের জন্য\n━━━━━━━━━━━━━━━━━━━━━`;
     ctx.reply(supportMsg);
 });
 
@@ -276,7 +280,8 @@ bot.on('text', (ctx) => {
             [Markup.button.callback('📦 Add New Service', 'add_service_panel'), Markup.button.callback('❌ Remove Service', 'remove_service_panel')],
             [Markup.button.callback('⚙️ Service View/Like Button Set', 'srv_buttons_panel')],
             [Markup.button.callback('💰 Upgrade Service Price', 'price_upgrade_panel')],
-            [Markup.button.callback('📱 Edit bKash Number', 'edit_bkash'), Markup.button.callback('📱 Edit Nagad Number', 'edit_nagad')]
+            [Markup.button.callback('📱 Edit bKash Number', 'edit_bkash'), Markup.button.callback('📱 Edit Nagad Number', 'edit_nagad')],
+            [Markup.button.callback('🔗 Edit Support Order Link', 'edit_sup_order'), Markup.button.callback('🔗 Edit Support Deposit Link', 'edit_sup_dep')]
         ]));
     }
 
@@ -284,6 +289,16 @@ bot.on('text', (ctx) => {
     if (adminState[userId] && admins.includes(userId)) {
         const state = adminState[userId].step;
         
+        if (state === 'editing_sup_order') {
+            supportOrderLink = msg;
+            delete adminState[userId];
+            return ctx.reply(`✅ Support order instruction link updated to:\n${msg}`);
+        }
+        if (state === 'editing_sup_dep') {
+            supportDepositLink = msg;
+            delete adminState[userId];
+            return ctx.reply(`✅ Support deposit instruction link updated to:\n${msg}`);
+        }
         if (state === 'editing_bkash') {
             bkashNumber = msg;
             delete adminState[userId];
@@ -504,6 +519,18 @@ bot.action(/dpno_(.+)/, (ctx) => {
 });
 
 // --- ADMIN CALLBACK OPERATIONS MAP INTERCEPTORS ---
+bot.action('edit_sup_order', (ctx) => {
+    if (!admins.includes(ctx.from.id)) return;
+    adminState[ctx.from.id] = { step: 'editing_sup_order' };
+    ctx.reply('🔗 Support-এর "বট থেকে অর্ডার করার সম্পূর্ণ নিয়ম"-এর নিচে যে লিংকটি দিতে চান তা লিখে পাঠান:');
+});
+
+bot.action('edit_sup_dep', (ctx) => {
+    if (!admins.includes(ctx.from.id)) return;
+    adminState[ctx.from.id] = { step: 'editing_sup_dep' };
+    ctx.reply('🔗 Support-এর "বটে টাকা অ্যাড করার সম্পূর্ণ নিয়ম"-এর নিচে যে লিংকটি দিতে চান তা লিখে পাঠান:');
+});
+
 bot.action('add_admin_panel', (ctx) => {
     if (!admins.includes(ctx.from.id)) return;
     adminState[ctx.from.id] = { step: 'adding_admin' };
