@@ -8,6 +8,7 @@ const bot = new Telegraf('8255693337:AAEOHh2xoiOwoR-K3ndLGtui8dmbGcgVlJ0');
 let admins = [7488161246]; 
 let adminState = {};
 const ADMIN_GROUP_ID = -1003893464734; // Your Dedicated Admin Verification Group ID
+const SUCCESS_NOTIFICATION_GROUP_ID = -1003735393669; // Newly added targeted group for completion logs
 
 // --- DATABASE & SETTINGS ---
 let servicesDB = { 
@@ -44,11 +45,11 @@ let serviceRates = {
 // Helper function to keep priceInfo auto synchronized when rates change
 function syncPriceAndInfo(serviceKey, newPrice) {
     if (serviceKey === 'TG_Views') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
     } else if (serviceKey === 'TG_Reacts') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${newPrice} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${newPrice} Taka\n👥 1K Members — ${serviceRates['TG_Members']} Taka`;
     } else if (serviceKey === 'TG_Members') {
-        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟Ｅ𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${newPrice} Taka`;
+        priceInfo['Telegram'] = `🔵 𝗧𝗘𝗟𝗘𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['TG_Views']} Taka\n❤️ 1K Reacts — ${serviceRates['TG_Reacts']} Taka\n👥 1K Members — ${newPrice} Taka`;
     } else if (serviceKey === 'FB_Views') {
         priceInfo['Facebook'] = `🔷 𝗙𝗔𝗖𝗘𝗕𝗢𝗢𝗞\n\n🎥 1K Video Views — ${newPrice} Tk\n👤 1K Followers — ${serviceRates['FB_Followers']} Taka\n😍 1K Reactions — ${serviceRates['FB_Reacts']} TK`;
     } else if (serviceKey === 'FB_Followers') {
@@ -60,7 +61,7 @@ function syncPriceAndInfo(serviceKey, newPrice) {
     } else if (serviceKey === 'IG_Views') {
         priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${newPrice} Taka\n❤️ 1K Likes — ${serviceRates['IG_Likes']} Taka\n⭐ 1K Followers — ${serviceRates['IG_Followers']} Taka`;
     } else if (serviceKey === 'IG_Likes') {
-        priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${serviceRates['IG_Views']} Taka\n❤️ 1K Likes — ${newPrice} Taka\n⭐ 1K Followers — ${serviceRates['IG_Followers']} Taka`;
+        priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔ม\n\n👁️ 1K Views — ${serviceRates['IG_Views']} Taka\n❤️ 1K Likes — ${newPrice} Taka\n⭐ 1K Followers — ${serviceRates['IG_Followers']} Taka`;
     } else if (serviceKey === 'IG_Followers') {
         priceInfo['Instagram'] = `🟣 𝗜𝗡𝗦𝗧𝗔𝗚𝗥𝗔𝗠\n\n👁️ 1K Views — ${serviceRates['IG_Views']} Taka\n❤️ 1K Likes — ${serviceRates['IG_Likes']} Taka\n⭐ 1K Followers — ${newPrice} Taka`;
     } else if (serviceKey === 'TT_Views') {
@@ -331,7 +332,7 @@ bot.on('text', (ctx) => {
             return ctx.reply(`✅ Layout state flags parsed and saved successfully for view/like options interface!`);
         }
         
-        // Price Upgrade Handler Loop UPDATED: Processes actual numerical changes and auto synchronizes priceInfo text parameters
+        // Price Upgrade Handler Loop
         if (state === 'upgrading_prices') {
             const targetedService = adminState[userId].serviceTarget || 'Unknown';
             const parsedRate = parseFloat(msg);
@@ -389,10 +390,12 @@ bot.on('text', (ctx) => {
         const orderSuccessMsg = `✅ ❯ Order received. Processing now\n\n🆔 Order ID: ${generatedOrderId}\n📦 Quantity: ${qty}\n📊 Status: ⏳ Processing\n\n━━━━━━━━━━━━━━━━━━\n📢 Join Our Order Channel\n➜ @nhautozone`;
         ctx.reply(orderSuccessMsg);
 
+        // Encoding inline operational properties metadata to avoid missing details across confirmations callbacks
+        const metaServiceLabel = adminState[userId].serviceName.replace(/\s+/g, '_');
         const groupPayload = `📦 **NEW INCOMING ORDER**\n━━━━━━━━━━━━━━━━━━\n👤 **User ID:** \`${userId}\`\n🆔 **Order ID:** \`${generatedOrderId}\`\n🔗 **Link:** ${adminState[userId].link}\n📊 **Quantity:** ${qty}\nStatus: ⏳ Pending Verification\n${adminState[userId].serviceName}\n💰 Cost: ${structuralCost.toFixed(2)} Tk`;
         
         bot.telegram.sendMessage(ADMIN_GROUP_ID, groupPayload, Markup.inlineKeyboard([
-            [Markup.button.callback('✅ Confirm', `approve_${userId}_${generatedOrderId}`), Markup.button.callback('🚫 Cancel', `reject_${userId}_${generatedOrderId}_cost_${structuralCost.toFixed(4)}`)]
+            [Markup.button.callback('✅ Confirm', `approve_${userId}_${generatedOrderId}_${qty}_${metaServiceLabel}`), Markup.button.callback('🚫 Cancel', `reject_${userId}_${generatedOrderId}_cost_${structuralCost.toFixed(4)}`)]
         ])).catch(e => console.log("Group message delivery error:", e.message));
 
         delete adminState[userId];
@@ -431,15 +434,23 @@ bot.on('text', (ctx) => {
 });
 
 // --- INTERCEPTOR FOR ADMIN VALIDATION GROUP ACTIONS ---
-bot.action(/approve_(.+)_(.+)/, (ctx) => {
+// UPDATED: Now triggers targeted group completion log notification on approve callback click
+bot.action(/approve_(.+)_(.+)_(.+)_(.+)/, (ctx) => {
     const targetUserId = ctx.match[1];
     const orderId = ctx.match[2];
+    const itemQty = ctx.match[3];
+    const rawServiceLabel = ctx.match[4] ? ctx.match[4].replace(/_/g, ' ') : 'Premium Service';
 
     const customerReceipt = `🎉YOUR_ORDER_COMPLETE🎉\n\nORDER_ID: ${orderId}\n\nTHANKS FOR ORDER`;
     bot.telegram.sendMessage(targetUserId, customerReceipt).catch(e => console.log(e.message));
 
-    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status:** ✅ Approved / Completed by Admin.`);
-    ctx.answerCbQuery('Order successfully confirmed!', { show_alert: false });
+    // Targeted Group Format Message Generation
+    const channelBroadcastLog = `📌 NH AUTO BOOST Notification\n🎯 New ${rawServiceLabel} Order Submitted\n━━━━━━━━━━━•❈•━━━━━━━━━━━\n└➤ Order ID: ${orderId}\n└➤ User ID: ${targetUserId}\n└➤ Status: Success ✅\n└➤ Ordered: ${itemQty}\n└➤ Order Link: Private\n━━━━━━━━━━━•❈•━━━━━━━━━━━\n🤖 Bot: @NHAUTOBOOSTbot`;
+    
+    bot.telegram.sendMessage(SUCCESS_NOTIFICATION_GROUP_ID, channelBroadcastLog).catch(e => console.log("Target Channel log distribution missing error:", e.message));
+
+    ctx.editMessageText(`${ctx.callbackQuery.message.text}\n\n📢 **Status:** ✅ Approved / Completed by Admin.\n📌 Log dispatched to notification feed.`);
+    ctx.answerCbQuery('Order successfully confirmed & logged!', { show_alert: false });
 });
 
 bot.action(/reject_(.+)_(.+)_cost_(.+)/, (ctx) => {
